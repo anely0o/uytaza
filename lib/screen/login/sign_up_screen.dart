@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
@@ -19,6 +20,10 @@ class _SignInScreenState extends State<SignUpScreen> {
   TextEditingController txtMobile = TextEditingController();
   TextEditingController txtEmail = TextEditingController();
   TextEditingController txtPassword = TextEditingController();
+
+  String? _selectedGender;
+  int? _selectedAge;
+  DateTime? _selectedDate;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +121,101 @@ class _SignInScreenState extends State<SignUpScreen> {
                           controller: txtPassword,
                         ),
                         const SizedBox(height: 10),
+
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "Gender",
+                            style: TextStyle(
+                              color: TColor.primaryText,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text("Male"),
+                                value: "Male",
+                                groupValue: _selectedGender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGender = value;
+                                  });
+                                },
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text("Female"),
+                                value: "Female",
+                                groupValue: _selectedGender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGender = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "Date of Birth${_selectedDate != null ? " : ${_selectedDate!.toLocal().toString().split(' ')[0]}" : ""}",
+                            style: TextStyle(
+                              color: TColor.primaryText,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () async {
+                            DateTime initialDate = DateTime(2000);
+                            DateTime firstDate = DateTime(1900);
+                            DateTime lastDate = DateTime.now();
+
+                            final DateTime? picked = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedDate ?? initialDate,
+                              firstDate: firstDate,
+                              lastDate: lastDate,
+                            );
+                            if (picked != null && picked != _selectedDate) {
+                              setState(() {
+                                _selectedDate = picked;
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 16,
+                            ),
+                            margin: const EdgeInsets.only(top: 5),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _selectedAge != null
+                                      ? "$_selectedAge years"
+                                      : "Select Age",
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const Icon(Icons.arrow_drop_down),
+                              ],
+                            ),
+                          ),
+                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           child: RoundButton(

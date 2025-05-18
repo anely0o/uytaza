@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/screen/login/verify_message_screen.dart';
@@ -129,23 +128,6 @@ class _MobileVerifyScreenState extends State<MobileVerifyScreen> {
                     ),
 
                     const SizedBox(height: 20),
-                    OtpTextField(
-                      numberOfFields: 4,
-                      borderColor: Colors.white,
-                      //set to true to show as box or false to show as dash
-                      showFieldAsBox: true,
-                      fieldWidth: 60,
-                      fieldHeight: 60,
-                      filled: true,
-                      borderRadius: BorderRadius.circular(10),
-                      fillColor: Colors.white,
-                      //runs when a code is typed in
-                      onCodeChanged: (String code) {
-                        //handle validation or checks here
-                      },
-                      //runs when every textfield is filled
-                      onSubmit: (String verificationCode) {}, // end onSubmit
-                    ),
 
                     TextButton(
                       onPressed: () {

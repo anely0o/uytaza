@@ -3,9 +3,11 @@ import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
-import 'package:uytaza/screen/home/choose_service_screen.dart';
+import 'package:uytaza/screen/home/home_screen.dart';
+import 'package:uytaza/screen/login/forgot_password_screen.dart';
 import 'package:uytaza/screen/login/sign_up_screen.dart';
-import 'package:uytaza/screen/message/chat_message_screen.dart';
+import 'package:uytaza/screen/main/main_tab_page.dart';
+
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -122,7 +124,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                   const TemporaryPasswordChangeScreen(),
                                 );
                               } else {
-                                context.push(const ChooseServiceScreen());
+                                context.push(const MainTabPage());
                               }
                             },
                           ),
@@ -132,7 +134,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           children: [
                             TextButton(
                               onPressed: () {
-                                context.push(const ChatMessageScreen());
+                                context.push(const ForgotPasswordScreen());
                               },
                               child: Text(
                                 "Forgot Password |",
