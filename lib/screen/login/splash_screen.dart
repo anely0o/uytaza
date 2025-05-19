@@ -1,6 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/screen/login/sign_in_screen.dart';
+import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
+
+import '../home/home_screen.dart';
+import 'api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,8 +25,43 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void loadView() async {
-    await Future.delayed(const Duration(seconds: 3));
-    goStart();
+    await Future.delayed(const Duration(seconds: 2));
+
+    final token = await ApiService.getToken();
+    if (token != null) {
+      goToAuth();
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/api/auth/validate'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['reset_required'] == true) {
+          context.push(
+            TemporaryPasswordChangeScreen(user: null, onUpdateUser: (user) {}),
+          );
+        } else {
+          context.push(HomeScreen(user: null, onUpdateUser: (user) {}));
+        }
+      } else {
+        goToAuth();
+      }
+    } catch (e) {
+      goToAuth();
+    }
+  }
+
+  void goToAuth() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const SignInScreen()),
+      (route) => false,
+    );
   }
 
   void goStart() {

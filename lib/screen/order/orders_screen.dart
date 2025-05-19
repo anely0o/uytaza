@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
+import 'package:uytaza/screen/models/user_model.dart';
 import 'package:uytaza/screen/order/order_build_page.dart';
-import 'package:uytaza/screen/order/order_model.dart';
+import 'package:uytaza/screen/models/order_model.dart';
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
+  final UserModel user;
+  const OrdersScreen({super.key, required this.user});
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -33,7 +35,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             onPressed: () async {
               final result = await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const OrderBuildPage()),
+                MaterialPageRoute(
+                  builder: (_) => OrderBuildPage(user: widget.user),
+                ),
               );
 
               if (result is Order) {

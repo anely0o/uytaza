@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart ';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/order/order_model.dart';
+import 'package:uytaza/screen/models/order_model.dart';
+import 'package:uytaza/screen/models/user_model.dart';
 import 'package:uytaza/screen/order/order_success_page.dart';
+import 'package:uytaza/screen/order/payment_method._screen.dart';
 
 class CalendarPage extends StatefulWidget {
   final String cleaningType;
   final String frequency;
   final List<String> extras;
+  final UserModel user;
 
   const CalendarPage({
     super.key,
     required this.cleaningType,
     required this.frequency,
     required this.extras,
+    required this.user,
   });
 
   @override
@@ -40,7 +44,7 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.primary, // пример фиолетового цвета
+      backgroundColor: TColor.primary,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -153,8 +157,6 @@ class _CalendarPageState extends State<CalendarPage> {
                     ),
                   ),
                   SizedBox(height: 24),
-
-                  // ВРЕМЯ
                   Row(
                     children: [
                       Icon(Icons.access_time, color: TColor.secondary),
@@ -220,12 +222,15 @@ class _CalendarPageState extends State<CalendarPage> {
                                   extras: widget.extras,
                                   dateTime: selectedDateTime,
                                 );
+
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
                                     builder:
-                                        (context) =>
-                                            OrderSuccessPage(order: order),
+                                        (context) => PaymentMethodScreen(
+                                          order: order,
+                                          user: widget.user,
+                                        ),
                                   ),
                                 );
                               }

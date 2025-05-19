@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
 import 'package:uytaza/screen/home/home_screen.dart';
+import 'api_service.dart';
+import 'package:uytaza/screen/models/user_model.dart';
 
 class TemporaryPasswordChangeScreen extends StatefulWidget {
   const TemporaryPasswordChangeScreen({super.key});
@@ -15,8 +19,59 @@ class TemporaryPasswordChangeScreen extends StatefulWidget {
 
 class _TemporaryPasswordChangeScreenState
     extends State<TemporaryPasswordChangeScreen> {
-  TextEditingController txtTemporaryPassword = TextEditingController();
-  TextEditingController txtNewPassword = TextEditingController();
+  final txtTemporaryPassword = TextEditingController();
+  final txtNewPassword = TextEditingController();
+
+  void _changePassword() async {
+    final tempPass = txtTemporaryPassword.text.trim();
+    final newPass = txtNewPassword.text.trim();
+
+    if (tempPass.isEmpty || newPass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    try {
+      final token = await ApiService.getToken();
+
+      final response = await http.put(
+        Uri.parse('${ApiService.baseUrl}/api/auth/set-initial-password'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'temporary_password': tempPass,
+          'new_password': newPass,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Password changed successfully")),
+        );
+        context.push(
+          HomeScreen(
+            user: user,
+            onUpdateUser: (user) {
+              setState(() {});
+            },
+          ),
+        );
+      } else {
+        final error = jsonDecode(response.body)['error'];
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +124,7 @@ class _TemporaryPasswordChangeScreenState
                           "Change Temporary Password",
                           style: TextStyle(
                             color: TColor.primaryText,
-                            fontSize: 32,
+                            fontSize: 28,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -79,75 +134,20 @@ class _TemporaryPasswordChangeScreenState
                           obscureText: true,
                           controller: txtTemporaryPassword,
                         ),
-                        const SizedBox(height: 25),
+                        const SizedBox(height: 15),
                         RoundTextfield(
-                          hintText: "NewPassword",
+                          hintText: "New Password",
                           obscureText: true,
-                          right: IconButton(
-                            onPressed: () {},
-                            icon: Image.asset(
-                              "assets/img/show_pass.png",
-                              width: 30,
-                            ),
-                          ),
                           controller: txtNewPassword,
                         ),
-                        const SizedBox(height: 15),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          child: RoundButton(
-                            title: "CHANGE PASSWORD",
-                            fontWeight: FontWeight.bold,
-                            onPressed: () {
-                              final tempPass = txtTemporaryPassword.text.trim();
-                              final newPass = txtNewPassword.text.trim();
-
-                              if (tempPass.isEmpty || newPass.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("please enter all"),
-                                  ),
-                                );
-                                return;
-                              }
-                              // здесь будет реальный АПИ для смены пароля
-                              // пока что просто показываем успех
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("пароль успешно изменен"),
-                                ),
-                              );
-                              Future.delayed(
-                                const Duration(milliseconds: 500),
-                                () {
-                                  Navigator.pushReplacement(
-                                    // ignore: use_build_context_synchronously
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const HomeScreen(),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            "Or Sign In with",
-                            style: TextStyle(
-                              color: TColor.placeholder,
-                              fontSize: 15,
-                            ),
-                          ),
+                        const SizedBox(height: 20),
+                        RoundButton(
+                          title: "CHANGE PASSWORD",
+                          fontWeight: FontWeight.bold,
+                          onPressed: _changePassword,
                         ),
                       ],
                     ),
-                  ),
-                  Text(
-                    "Forgot Password?",
-                    style: TextStyle(color: TColor.primaryText, fontSize: 15),
                   ),
                   const SizedBox(height: 10),
                   RoundButton(

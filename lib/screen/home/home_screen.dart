@@ -4,12 +4,21 @@ import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/link_button.dart';
 import 'package:uytaza/common_widget/select_icon_title_button.dart';
 import 'package:uytaza/screen/home/subscription_cell.dart';
+import 'package:uytaza/screen/models/user_model.dart';
 import 'package:uytaza/screen/order/order_build_page.dart';
 import 'package:uytaza/screen/profile/profile_screen.dart';
 import 'package:uytaza/screen/main/main_tab_page.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final UserModel? user;
+  final void Function(UserModel) onUpdateUser;
+  final VoidCallback? onProfileTap;
+  const HomeScreen({
+    super.key,
+    required this.user,
+    required this.onUpdateUser,
+    this.onProfileTap,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -93,12 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     //avatar,name
                     GestureDetector(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileScreen(),
-                          ),
-                        );
+                        if (widget.onProfileTap != null) {
+                          widget.onProfileTap!();
+                        }
                       },
                       child: Row(
                         children: [
@@ -207,7 +213,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const OrderBuildPage(),
+                              builder:
+                                  (context) =>
+                                      OrderBuildPage(user: widget.user!),
                             ),
                           );
                         },

@@ -69,7 +69,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
               ),
 
               const Text(
-                "Anida Mitalipova",
+                "Adviser",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 17,
@@ -148,8 +148,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
                               ),
                               child: Text(
                                 isSender
-                                    ? "hi"
-                                    : "Hi ma name is MArzhan and i want to order a carpet cleaning",
+                                    ? "Hello! 👋\n\n"
+                                        "Thank you for reaching out to our cleaning service. \n\n"
+                                        "We’re here to assist you with any questions, issues, or requests you may have.\n\n"
+                                        "Our team is available from 9:00 AM to 6:00 PM (Mon–Sat) and will get back to you as soon as possible.\nn"
+                                    : "Hi ",
                                 style: TextStyle(
                                   color:
                                       isSender

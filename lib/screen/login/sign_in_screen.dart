@@ -1,14 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
-import 'package:uytaza/screen/home/home_screen.dart';
-import 'package:uytaza/screen/login/forgot_password_screen.dart';
+import 'package:uytaza/screen/home/choose_service_screen.dart';
 import 'package:uytaza/screen/login/sign_up_screen.dart';
-import 'package:uytaza/screen/main/main_tab_page.dart';
-
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
+
+import '../home/home_screen.dart';
+import 'api_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,8 +22,59 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  TextEditingController txtEmail = TextEditingController();
-  TextEditingController txtPassword = TextEditingController();
+  final txtEmail = TextEditingController();
+  final txtPassword = TextEditingController();
+  bool isPasswordVisible = false;
+
+  void _handleSignIn() async {
+    final email = txtEmail.text.trim();
+    final password = txtPassword.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter email and password")),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiService.post('/api/auth/login', {
+        'email': email,
+        'password': password,
+      });
+
+      if (response.statusCode == 200) {
+        final token = jsonDecode(response.body)['token'];
+        await ApiService.saveToken(token);
+
+        // Check if password needs to be changed
+        final validationResponse = await http.get(
+          Uri.parse('${ApiService.baseUrl}/api/auth/validate'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+
+        if (jsonDecode(validationResponse.body)['reset_required'] == true) {
+          context.push(
+            TemporaryPasswordChangeScreen(
+              user: null,
+              onUpdateUser: (UserModel) {},
+            ),
+          );
+        } else {
+          context.push(HomeScreen(user: null, onUpdateUser: (UserModel) {}));
+        }
+      } else {
+        final error = jsonDecode(response.body)['error'];
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login failed: ${e.toString()}')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,162 +85,175 @@ class _SignInScreenState extends State<SignInScreen> {
           Positioned.fill(
             child: Image.asset("assets/img/bg.png", fit: BoxFit.cover),
           ),
-          SizedBox(
-            width: context.width,
-            height: context.height,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 25),
-                  Image.asset(
-                    "assets/img/logo.png",
-                    width: context.width * 0.50,
-                    fit: BoxFit.fitWidth,
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                Image.asset("assets/img/logo.png", width: context.width * 0.5),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                    ],
                   ),
-                  const SizedBox(height: 15),
-                  Container(
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 25,
-                      horizontal: 25,
-                    ),
-                    width: double.maxFinite,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 45,
-                      vertical: 25,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 3,
-                          offset: Offset(0, 2),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Sign In",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: TColor.title,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Sign In",
-                          style: TextStyle(
-                            color: TColor.title,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
+                      ),
+                      const SizedBox(height: 16),
+                      RoundTextfield(
+                        hintText: "Email",
+                        keyboardType: TextInputType.emailAddress,
+                        controller: txtEmail,
+                      ),
+                      const SizedBox(height: 16),
+                      RoundTextfield(
+                        hintText: "Password",
+                        obscureText: !isPasswordVisible,
+                        controller: txtPassword,
+                        right: IconButton(
+                          onPressed: () {
+                            setState(
+                              () => isPasswordVisible = !isPasswordVisible,
+                            );
+                          },
+                          icon: Icon(
+                            isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: TColor.primary,
                           ),
                         ),
-                        const SizedBox(height: 25),
-                        RoundTextfield(
-                          hintText: "Email",
-                          keyboardType: TextInputType.emailAddress,
-                          controller: txtEmail,
-                        ),
-                        const SizedBox(height: 25),
-                        RoundTextfield(
-                          hintText: "Password",
-                          obscureText: true,
-                          right: IconButton(
-                            onPressed: () {},
-                            icon: Image.asset(
-                              "assets/img/show_pass.png",
-                              width: 30,
-                            ),
-                          ),
-                          controller: txtPassword,
-                        ),
-                        const SizedBox(height: 15),
-
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          child: RoundButton(
-                            title: "SIGN IN",
-                            fontWeight: FontWeight.bold,
-                            onPressed: () async {
-                              final email = txtEmail.text.trim();
-                              final password = txtPassword.text.trim();
-
-                              if (email.isEmpty || password.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("enter email and password"),
-                                  ),
-                                );
-                                return;
-                              }
-                              //временно имитируем поведение сервера
-                              final isTemporaryPassword =
-                                  password ==
-                                  '123456'; //позже заменим на реальный запрос
-
-                              if (isTemporaryPassword) {
-                                context.push(
-                                  const TemporaryPasswordChangeScreen(),
-                                );
-                              } else {
-                                context.push(const MainTabPage());
-                              }
-                            },
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            TextButton(
-                              onPressed: () {
-                                context.push(const ForgotPasswordScreen());
-                              },
-                              child: Text(
-                                "Forgot Password |",
-                                style: TextStyle(
-                                  color: TColor.primaryText,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            "Or Sign In with",
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _handleForgotPassword,
+                          child: const Text(
+                            "Forgot Password?",
                             style: TextStyle(
-                              color: TColor.placeholder,
-                              fontSize: 15,
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            InkWell(
-                              onTap: () {},
-                              child: Image.asset(
-                                "assets/img/google.png",
-                                width: 50,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                      const SizedBox(height: 10),
+                      RoundButton(
+                        title: "SIGN IN",
+                        fontWeight: FontWeight.bold,
+                        onPressed: _handleSignIn,
+                      ),
 
-                  RoundButton(
-                    title: "SIGNUP",
-                    width: context.width * 0.65,
-                    type: RoundButtonType.line,
-                    onPressed: () {
-                      context.push(SignUpScreen());
-                    },
+                      const SizedBox(height: 10),
+                      Text(
+                        "Or Sign In with",
+                        style: TextStyle(color: TColor.placeholder),
+                      ),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        onTap: _handleGoogleSignIn,
+                        child: Image.asset("assets/img/google.png", width: 50),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "Don't have an account?",
+                  style: TextStyle(color: TColor.primaryText),
+                ),
+                RoundButton(
+                  title: "SIGN UP",
+                  width: context.width * 0.65,
+                  type: RoundButtonType.line,
+                  onPressed: () => context.push(const SignUpScreen()),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _handleForgotPassword() async {
+    final email = txtEmail.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter your email first")),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiService.post('/api/auth/resend-password', {
+        'email': email,
+      });
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Temporary password sent to your email"),
+          ),
+        );
+
+        // Переход на экран смены пароля
+        context.push(
+          TemporaryPasswordChangeScreen(
+            user: null,
+            onUpdateUser: (UserModel) {},
+          ),
+        );
+      } else {
+        final error = jsonDecode(response.body)['error'];
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed: ${e.toString()}')));
+    }
+  }
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  void _handleGoogleSignIn() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final response = await ApiService.post('/api/auth/google-login', {
+        'id_token': googleAuth.idToken,
+      });
+
+      if (response.statusCode == 200) {
+        final token = jsonDecode(response.body)['token'];
+        await ApiService.saveToken(token);
+        context.push(HomeScreen(user: null, onUpdateUser: (UserModel) {}));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In failed: ${e.toString()}')),
+      );
+    }
   }
 }

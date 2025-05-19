@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/main/main_tab_page.dart';
+import 'package:uytaza/screen/models/user_model.dart';
 import 'package:uytaza/screen/order/orders_screen.dart';
-import 'order_model.dart';
+import '../models/order_model.dart';
 
 class OrderSuccessPage extends StatelessWidget {
   final Order order;
+  final UserModel user;
 
-  const OrderSuccessPage({super.key, required this.order});
+  const OrderSuccessPage({super.key, required this.order, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +66,8 @@ class OrderSuccessPage extends StatelessWidget {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const MainTabPage(initialIndex: 2),
+                          builder:
+                              (_) => MainTabPage(initialIndex: 2, user: user),
                         ),
                         (route) => false,
                       );

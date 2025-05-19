@@ -1,29 +1,62 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
+import 'api_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignInScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignInScreenState extends State<SignUpScreen> {
-  TextEditingController txtFirstName = TextEditingController();
-  TextEditingController txtLastName = TextEditingController();
-  TextEditingController txtAddress = TextEditingController();
-  TextEditingController txtMobile = TextEditingController();
-  TextEditingController txtEmail = TextEditingController();
-  TextEditingController txtPassword = TextEditingController();
+class _SignUpScreenState extends State<SignUpScreen> {
+  final txtFirstName = TextEditingController();
+  final txtLastName = TextEditingController();
+  final txtEmail = TextEditingController();
 
-  String? _selectedGender;
-  int? _selectedAge;
-  DateTime? _selectedDate;
+  void _handleSignUp() async {
+    if (txtFirstName.text.isEmpty ||
+        txtLastName.text.isEmpty ||
+        txtEmail.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all required fields")),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiService.post('/api/auth/register', {
+        'first_name': txtFirstName.text.trim(),
+        'last_name': txtLastName.text.trim(),
+        'email': txtEmail.text.trim(),
+      });
+
+      if (response.statusCode == 200) {
+        final token = jsonDecode(response.body)['token'];
+        await ApiService.saveToken(token);
+        context.push(
+          TemporaryPasswordChangeScreen(
+            user: null,
+            onUpdateUser: (UserModel) {},
+          ),
+        );
+      } else {
+        final error = jsonDecode(response.body)['error'];
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Registration failed: ${e.toString()}')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,241 +67,81 @@ class _SignInScreenState extends State<SignUpScreen> {
           Positioned.fill(
             child: Image.asset("assets/img/bg.png", fit: BoxFit.cover),
           ),
-          SizedBox(
-            width: context.width,
-            height: context.height,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 25),
-                  Image.asset(
-                    "assets/img/logo.png",
-                    width: context.width * 0.50,
-                    fit: BoxFit.fitWidth,
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                Image.asset("assets/img/logo.png", width: context.width * 0.5),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                    ],
                   ),
-                  const SizedBox(height: 15),
-                  Container(
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 15,
-                      horizontal: 15,
-                    ),
-                    width: double.maxFinite,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 25,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 3,
-                          offset: Offset(0, 2),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Sign Up",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: TColor.title,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          "SignUp",
-                          style: TextStyle(
-                            color: TColor.title,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        NewRoundTextfield(
-                          hintText: "First Name",
-                          controller: txtFirstName,
-                        ),
-                        const SizedBox(height: 10),
-                        NewRoundTextfield(
-                          hintText: "Last Name",
-                          controller: txtLastName,
-                        ),
-                        const SizedBox(height: 10),
-                        NewRoundTextfield(
-                          hintText: "Email",
-                          keyboardType: TextInputType.emailAddress,
-                          controller: txtEmail,
-                        ),
-                        NewRoundTextfield(
-                          hintText: "Address",
-                          keyboardType: TextInputType.streetAddress,
-                          controller: txtAddress,
-                        ),
-                        const SizedBox(height: 10),
-                        NewRoundTextfield(
-                          hintText: "Mobile Number",
-                          keyboardType: TextInputType.phone,
-                          controller: txtMobile,
-                        ),
-                        const SizedBox(height: 10),
-                        NewRoundTextfield(
-                          hintText: "Password",
-                          obscureText: true,
-                          right: IconButton(
-                            onPressed: () {},
-                            icon: Image.asset(
-                              "assets/img/show_pass.png",
-                              width: 30,
-                            ),
-                          ),
-                          controller: txtPassword,
-                        ),
-                        const SizedBox(height: 10),
-
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "Gender",
-                            style: TextStyle(
-                              color: TColor.primaryText,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: RadioListTile<String>(
-                                title: const Text("Male"),
-                                value: "Male",
-                                groupValue: _selectedGender,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGender = value;
-                                  });
-                                },
-                              ),
-                            ),
-                            Expanded(
-                              child: RadioListTile<String>(
-                                title: const Text("Female"),
-                                value: "Female",
-                                groupValue: _selectedGender,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGender = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "Date of Birth${_selectedDate != null ? " : ${_selectedDate!.toLocal().toString().split(' ')[0]}" : ""}",
-                            style: TextStyle(
-                              color: TColor.primaryText,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            DateTime initialDate = DateTime(2000);
-                            DateTime firstDate = DateTime(1900);
-                            DateTime lastDate = DateTime.now();
-
-                            final DateTime? picked = await showDatePicker(
-                              context: context,
-                              initialDate: _selectedDate ?? initialDate,
-                              firstDate: firstDate,
-                              lastDate: lastDate,
-                            );
-                            if (picked != null && picked != _selectedDate) {
-                              setState(() {
-                                _selectedDate = picked;
-                              });
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                            margin: const EdgeInsets.only(top: 5),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _selectedAge != null
-                                      ? "$_selectedAge years"
-                                      : "Select Age",
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const Icon(Icons.arrow_drop_down),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          child: RoundButton(
-                            title: "SIGN UP",
-                            fontWeight: FontWeight.bold,
-                            onPressed: () {
-                              context.push(
-                                const TemporaryPasswordChangeScreen(),
-                              );
-                            },
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            "Or Sign Up with",
-                            style: TextStyle(
-                              color: TColor.placeholder,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            InkWell(
-                              onTap: () {},
-                              child: Image.asset(
-                                "assets/img/google.png",
-                                width: 50,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 16),
+                      NewRoundTextfield(
+                        hintText: "First Name",
+                        controller: txtFirstName,
+                      ),
+                      const SizedBox(height: 10),
+                      NewRoundTextfield(
+                        hintText: "Last Name",
+                        controller: txtLastName,
+                      ),
+                      const SizedBox(height: 10),
+                      NewRoundTextfield(
+                        hintText: "Email",
+                        keyboardType: TextInputType.emailAddress,
+                        controller: txtEmail,
+                      ),
+                      const SizedBox(height: 20),
+                      RoundButton(
+                        title: "SIGN UP",
+                        fontWeight: FontWeight.bold,
+                        onPressed: _handleSignUp,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Or Sign Up with",
+                        style: TextStyle(color: TColor.placeholder),
+                      ),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        onTap: () {
+                          // TODO: Google Sign-Up
+                        },
+                        child: Image.asset("assets/img/google.png", width: 50),
+                      ),
+                    ],
                   ),
-                  Text(
-                    "Already have an account?",
-                    style: TextStyle(color: TColor.primaryText, fontSize: 15),
-                  ),
-                  const SizedBox(height: 10),
-                  RoundButton(
-                    title: "SIGN IN",
-                    width: context.width * 0.65,
-                    type: RoundButtonType.line,
-                    onPressed: () {
-                      context.pop();
-                    },
-                  ),
-                  const SizedBox(height: 15),
-                ],
-              ),
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  "Already have an account?",
+                  style: TextStyle(color: TColor.primaryText),
+                ),
+                RoundButton(
+                  title: "SIGN IN",
+                  width: context.width * 0.65,
+                  type: RoundButtonType.line,
+                  onPressed: () => context.pop(),
+                ),
+              ],
             ),
           ),
         ],

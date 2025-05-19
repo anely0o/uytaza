@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
+import 'package:uytaza/screen/models/user_model.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final UserModel user;
+  final void Function(UserModel newUser) onUpdateUser;
+
+  const ProfileScreen({
+    Key? key,
+    required this.user,
+    required this.onUpdateUser,
+  }) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -104,42 +112,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
                 const Expanded(
-                  child: Center(
-                    child: Text(
-                      "Details",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        "Details",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
                   onPressed: () {
-                    // TODO: Navigate to settings
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
                   },
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person, size: 50, color: Colors.grey),
+          GestureDetector(
+            onTap: _changeAvatarDialog,
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.white,
+              child: const Icon(Icons.person, size: 50, color: Colors.grey),
+            ),
           ),
           const SizedBox(height: 12),
           GestureDetector(
-            onTap: _editNameDialog,
+            onTap: () => _editNameDialog,
             child: Text(
               "${firstNameController.text} ${lastNameController.text}",
               style: const TextStyle(
@@ -222,6 +233,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  @override
+  void initState() {
+    super.initState();
+    firstNameController.text = widget.user.firstName;
+    lastNameController.text = widget.user.lastName;
+    emailController.text = widget.user.email;
+    phoneController.text = widget.user.phoneNumber;
+    addressController.text = widget.user.address;
+    roleController.text = widget.user.role;
+    subscriptionController.text = widget.user.subscription;
+    // и так далее
+  }
+
+  void _editNameDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Name"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: firstNameController,
+                decoration: const InputDecoration(labelText: "First Name"),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: lastNameController,
+                decoration: const InputDecoration(labelText: "Last Name"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _changeAvatarDialog() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Change Avatar",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text("Choose from Gallery"),
+                onTap: () {
+                  //todo implement gallery picker
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Take a photo"),
+                onTap: () {
+                  //todo implement camera capture
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _editFieldDialog(String label, TextEditingController controller) {
     showDialog(
       context: context,
@@ -249,39 +347,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _editNameDialog() {
-    showDialog(
+  void _editFieldBottomSheet(String label, TextEditingController controller) {
+    showModalBottomSheet(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("Edit Name"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: firstNameController,
-                  decoration: const InputDecoration(labelText: "First Name"),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            top: 20,
+            left: 20,
+            right: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Edit $label",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
-                TextField(
-                  controller: lastNameController,
-                  decoration: const InputDecoration(labelText: "Last Name"),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  labelText: label,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
                   setState(() {});
                   Navigator.pop(context);
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: TColor.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: const Text("Save"),
               ),
+              const SizedBox(height: 20),
             ],
           ),
+        );
+      },
     );
   }
 }
