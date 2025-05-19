@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       goToAuth();
     }
-  }
+  }//chan
 
   void goToAuth() {
     Navigator.pushAndRemoveUntil(
