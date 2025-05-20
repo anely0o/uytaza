@@ -42,11 +42,9 @@ class _SplashScreenState extends State<SplashScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['reset_required'] == true) {
-          context.push(
-            TemporaryPasswordChangeScreen(user: null, onUpdateUser: (user) {}),
-          );
+          context.push(TemporaryPasswordChangeScreen());
         } else {
-          context.push(HomeScreen(user: null, onUpdateUser: (user) {}));
+          context.push(HomeScreen());
         }
       } else {
         goToAuth();
@@ -54,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       goToAuth();
     }
-  }//chan
+  } //chan
 
   void goToAuth() {
     Navigator.pushAndRemoveUntil(

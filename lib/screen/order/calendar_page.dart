@@ -2,22 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/models/order_model.dart';
-import 'package:uytaza/screen/models/user_model.dart';
-import 'package:uytaza/screen/order/order_success_page.dart';
+
 import 'package:uytaza/screen/order/payment_method._screen.dart';
 
 class CalendarPage extends StatefulWidget {
   final String cleaningType;
   final String frequency;
   final List<String> extras;
-  final UserModel user;
 
   const CalendarPage({
     super.key,
     required this.cleaningType,
     required this.frequency,
     required this.extras,
-    required this.user,
   });
 
   @override
@@ -227,10 +224,8 @@ class _CalendarPageState extends State<CalendarPage> {
                                   context,
                                   MaterialPageRoute(
                                     builder:
-                                        (context) => PaymentMethodScreen(
-                                          order: order,
-                                          user: widget.user,
-                                        ),
+                                        (context) =>
+                                            PaymentMethodScreen(order: order),
                                   ),
                                 );
                               }

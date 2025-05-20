@@ -3,15 +3,14 @@ import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/home/home_screen.dart';
 import 'package:uytaza/screen/message/chat_message_screen.dart';
 import 'package:uytaza/screen/message/message_screen.dart';
-import 'package:uytaza/screen/models/user_model.dart';
+
 import 'package:uytaza/screen/order/orders_screen.dart';
 import 'package:uytaza/screen/profile/profile_screen.dart';
 
 class MainTabPage extends StatefulWidget {
   final int initialIndex;
-  final UserModel user;
 
-  const MainTabPage({super.key, this.initialIndex = 0, required this.user});
+  const MainTabPage({super.key, this.initialIndex = 0});
 
   @override
   State<MainTabPage> createState() => _MainTabPageState();
@@ -19,27 +18,21 @@ class MainTabPage extends StatefulWidget {
 
 class _MainTabPageState extends State<MainTabPage> {
   late int _selectedIndex;
-  late UserModel _user;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
-    _user = widget.user;
   }
 
-  void _updateUser(UserModel newUser) {
-    setState(() {
-      _user = newUser;
-    });
+  void _updateUser() {
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       HomeScreen(
-        user: _user,
-        onUpdateUser: _updateUser,
         onProfileTap: () {
           setState(() {
             _selectedIndex = 3;
@@ -47,8 +40,8 @@ class _MainTabPageState extends State<MainTabPage> {
         },
       ),
       ChatMessageScreen(),
-      OrdersScreen(user: widget.user),
-      ProfileScreen(user: _user, onUpdateUser: _updateUser),
+      OrdersScreen(),
+      ProfileScreen(),
     ];
     final List<String> icons = [
       "assets/img/home_icon.png",

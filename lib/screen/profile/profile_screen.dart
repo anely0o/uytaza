@@ -2,18 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
-import 'package:uytaza/screen/models/user_model.dart';
+
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final UserModel user;
-  final void Function(UserModel newUser) onUpdateUser;
-
-  const ProfileScreen({
-    Key? key,
-    required this.user,
-    required this.onUpdateUser,
-  }) : super(key: key);
+  const ProfileScreen({Key? key}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -231,19 +224,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       trailing: const Icon(Icons.chevron_right),
       subtitle: Text(value, style: TextStyle(color: TColor.secondaryText)),
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    firstNameController.text = widget.user.firstName;
-    lastNameController.text = widget.user.lastName;
-    emailController.text = widget.user.email;
-    phoneController.text = widget.user.phoneNumber;
-    addressController.text = widget.user.address;
-    roleController.text = widget.user.role;
-    subscriptionController.text = widget.user.subscription;
-    // и так далее
   }
 
   void _editNameDialog() {

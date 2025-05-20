@@ -7,7 +7,6 @@ import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
 import 'package:uytaza/screen/home/home_screen.dart';
 import 'api_service.dart';
-import 'package:uytaza/screen/models/user_model.dart';
 
 class TemporaryPasswordChangeScreen extends StatefulWidget {
   const TemporaryPasswordChangeScreen({super.key});
@@ -52,14 +51,7 @@ class _TemporaryPasswordChangeScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Password changed successfully")),
         );
-        context.push(
-          HomeScreen(
-            user: user,
-            onUpdateUser: (user) {
-              setState(() {});
-            },
-          ),
-        );
+        context.push(HomeScreen());
       } else {
         final error = jsonDecode(response.body)['error'];
         ScaffoldMessenger.of(

@@ -4,17 +4,13 @@ import "package:uytaza/common/extension.dart";
 import "package:uytaza/common_widget/icon_select_button.dart";
 import "package:uytaza/common_widget/round_button.dart";
 import "package:uytaza/screen/models/order_model.dart";
-import "package:uytaza/screen/models/user_model.dart";
+
 import "package:uytaza/screen/order/order_success_page.dart";
 
 class PaymentMethodScreen extends StatefulWidget {
   final Order order;
-  final UserModel user;
-  const PaymentMethodScreen({
-    super.key,
-    required this.order,
-    required this.user,
-  });
+
+  const PaymentMethodScreen({super.key, required this.order});
 
   @override
   State<PaymentMethodScreen> createState() => _PaymentMethodScreenState();
@@ -374,12 +370,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       width: 150,
                       title: "Next",
                       onPressed: () {
-                        context.push(
-                          OrderSuccessPage(
-                            order: widget.order,
-                            user: widget.user,
-                          ),
-                        );
+                        context.push(OrderSuccessPage(order: widget.order));
                       },
                     ),
                   ],

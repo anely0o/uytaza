@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/models/user_model.dart';
+
 import 'package:uytaza/screen/order/calendar_page.dart';
 
 class OrderBuildPage extends StatefulWidget {
-  final UserModel user;
-  const OrderBuildPage({super.key, required this.user});
+  const OrderBuildPage({super.key});
 
   @override
   State<OrderBuildPage> createState() => _OrderBuildPageState();
@@ -298,7 +297,6 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
                             MaterialPageRoute(
                               builder:
                                   (context) => CalendarPage(
-                                    user: widget.user,
                                     cleaningType: selectedType,
                                     frequency: selectedFrequency,
                                     extras: selectedExtras.toList(),
