@@ -4,21 +4,13 @@ import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/link_button.dart';
 import 'package:uytaza/common_widget/select_icon_title_button.dart';
 import 'package:uytaza/screen/home/subscription_cell.dart';
-import 'package:uytaza/screen/models/user_model.dart';
+
 import 'package:uytaza/screen/order/order_build_page.dart';
 import 'package:uytaza/screen/profile/profile_screen.dart';
 import 'package:uytaza/screen/main/main_tab_page.dart';
 
 class HomeScreen extends StatefulWidget {
-  final UserModel? user;
-  final void Function(UserModel) onUpdateUser;
-  final VoidCallback? onProfileTap;
-  const HomeScreen({
-    super.key,
-    required this.user,
-    required this.onUpdateUser,
-    this.onProfileTap,
-  });
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -101,11 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     //avatar,name
                     GestureDetector(
-                      onTap: () {
-                        if (widget.onProfileTap != null) {
-                          widget.onProfileTap!();
-                        }
-                      },
+                      onTap: () {},
                       child: Row(
                         children: [
                           CircleAvatar(
@@ -213,9 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) =>
-                                      OrderBuildPage(user: widget.user!),
+                              builder: (context) => OrderBuildPage(),
                             ),
                           );
                         },

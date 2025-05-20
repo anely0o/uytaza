@@ -39,12 +39,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (response.statusCode == 200) {
         final token = jsonDecode(response.body)['token'];
         await ApiService.saveToken(token);
-        context.push(
-          TemporaryPasswordChangeScreen(
-            user: null,
-            onUpdateUser: (UserModel) {},
-          ),
-        );
+        context.push(TemporaryPasswordChangeScreen());
       } else {
         final error = jsonDecode(response.body)['error'];
         ScaffoldMessenger.of(

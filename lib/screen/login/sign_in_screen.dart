@@ -54,14 +54,9 @@ class _SignInScreenState extends State<SignInScreen> {
         );
 
         if (jsonDecode(validationResponse.body)['reset_required'] == true) {
-          context.push(
-            TemporaryPasswordChangeScreen(
-              user: null,
-              onUpdateUser: (UserModel) {},
-            ),
-          );
+          context.push(const TemporaryPasswordChangeScreen());
         } else {
-          context.push(HomeScreen(user: null, onUpdateUser: (UserModel) {}));
+          context.push(const HomeScreen());
         }
       } else {
         final error = jsonDecode(response.body)['error'];
@@ -212,12 +207,7 @@ class _SignInScreenState extends State<SignInScreen> {
         );
 
         // Переход на экран смены пароля
-        context.push(
-          TemporaryPasswordChangeScreen(
-            user: null,
-            onUpdateUser: (UserModel) {},
-          ),
-        );
+        context.push(const TemporaryPasswordChangeScreen());
       } else {
         final error = jsonDecode(response.body)['error'];
         ScaffoldMessenger.of(
@@ -248,7 +238,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (response.statusCode == 200) {
         final token = jsonDecode(response.body)['token'];
         await ApiService.saveToken(token);
-        context.push(HomeScreen(user: null, onUpdateUser: (UserModel) {}));
+        context.push(const HomeScreen());
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

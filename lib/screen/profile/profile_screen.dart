@@ -2,18 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
-import 'package:uytaza/screen/models/user_model.dart';
+
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final UserModel user;
-  final void Function(UserModel newUser) onUpdateUser;
-
-  const ProfileScreen({
-    Key? key,
-    required this.user,
-    required this.onUpdateUser,
-  }) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -233,19 +226,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    firstNameController.text = widget.user.firstName;
-    lastNameController.text = widget.user.lastName;
-    emailController.text = widget.user.email;
-    phoneController.text = widget.user.phoneNumber;
-    addressController.text = widget.user.address;
-    roleController.text = widget.user.role;
-    subscriptionController.text = widget.user.subscription;
-    // и так далее
-  }
-
   void _editNameDialog() {
     showDialog(
       context: context,
@@ -347,60 +327,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _editFieldBottomSheet(String label, TextEditingController controller) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 20,
-            left: 20,
-            right: 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Edit $label",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: label,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {});
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TColor.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text("Save"),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  //void _editFieldBottomSheet(String label, TextEditingController controller) {
+  //showModalBottomSheet(
+  //context: context,
+  //isScrollControlled: true,
+  //shape: const RoundedRectangleBorder(
+  //borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+  //),
+  //builder: (context) {
+  //return Padding(
+  //padding: EdgeInsets.only(
+  //bottom: MediaQuery.of(context).viewInsets.bottom,
+  //top: 20,
+  //left: 20,
+  //right: 20,
+  //),
+  //child: Column(
+  //mainAxisSize: MainAxisSize.min,
+  //children: [
+  //Text(
+  //"Edit $label",
+  //style: const TextStyle(
+  //fontSize: 18,
+  //fontWeight: FontWeight.bold,
+  //),
+  //),
+  //const SizedBox(height: 12),
+  //TextField(
+  //controller: controller,
+  //decoration: InputDecoration(
+  //labelText: label,
+  //border: OutlineInputBorder(
+  //borderRadius: BorderRadius.circular(12),
+  //),
+  //),
+  //),
+  //const SizedBox(height: 16),
+  //ElevatedButton(
+  //onPressed: () {
+  //setState(() {});
+  //Navigator.pop(context);
+  //},
+  //style: ElevatedButton.styleFrom(
+  //backgroundColor: TColor.primary,
+  //shape: RoundedRectangleBorder(
+  //borderRadius: BorderRadius.circular(12),
+  //),
+  //),
+  //child: const Text("Save"),
+  //),
+  //const SizedBox(height: 20),
+  //],
+  //),
+  //);
+  //},
+  //);
+  //}
 }
