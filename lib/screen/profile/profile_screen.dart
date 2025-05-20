@@ -6,7 +6,7 @@ import 'package:uytaza/common_widget/round_textfield.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -327,60 +327,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _editFieldBottomSheet(String label, TextEditingController controller) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 20,
-            left: 20,
-            right: 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Edit $label",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: label,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {});
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TColor.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text("Save"),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  //void _editFieldBottomSheet(String label, TextEditingController controller) {
+  //showModalBottomSheet(
+  //context: context,
+  //isScrollControlled: true,
+  //shape: const RoundedRectangleBorder(
+  //borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+  //),
+  //builder: (context) {
+  //return Padding(
+  //padding: EdgeInsets.only(
+  //bottom: MediaQuery.of(context).viewInsets.bottom,
+  //top: 20,
+  //left: 20,
+  //right: 20,
+  //),
+  //child: Column(
+  //mainAxisSize: MainAxisSize.min,
+  //children: [
+  //Text(
+  //"Edit $label",
+  //style: const TextStyle(
+  //fontSize: 18,
+  //fontWeight: FontWeight.bold,
+  //),
+  //),
+  //const SizedBox(height: 12),
+  //TextField(
+  //controller: controller,
+  //decoration: InputDecoration(
+  //labelText: label,
+  //border: OutlineInputBorder(
+  //borderRadius: BorderRadius.circular(12),
+  //),
+  //),
+  //),
+  //const SizedBox(height: 16),
+  //ElevatedButton(
+  //onPressed: () {
+  //setState(() {});
+  //Navigator.pop(context);
+  //},
+  //style: ElevatedButton.styleFrom(
+  //backgroundColor: TColor.primary,
+  //shape: RoundedRectangleBorder(
+  //borderRadius: BorderRadius.circular(12),
+  //),
+  //),
+  //child: const Text("Save"),
+  //),
+  //const SizedBox(height: 20),
+  //],
+  //),
+  //);
+  //},
+  //);
+  //}
 }

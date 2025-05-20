@@ -207,6 +207,7 @@ class _SignInScreenState extends State<SignInScreen> {
         );
 
         // Переход на экран смены пароля
+
         context.push(TemporaryPasswordChangeScreen());
       } else {
         final error = jsonDecode(response.body)['error'];
@@ -238,6 +239,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (response.statusCode == 200) {
         final token = jsonDecode(response.body)['token'];
         await ApiService.saveToken(token);
+
         context.push(HomeScreen());
       }
     } catch (e) {

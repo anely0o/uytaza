@@ -94,11 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     //avatar,name
                     GestureDetector(
-                      onTap: () {
-                        if (widget.onProfileTap != null) {
-                          widget.onProfileTap!();
-                        }
-                      },
+                      onTap: () {},
                       child: Row(
                         children: [
                           CircleAvatar(

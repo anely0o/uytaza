@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/home/home_screen.dart';
 import 'package:uytaza/screen/message/chat_message_screen.dart';
+
 import 'package:uytaza/screen/message/message_screen.dart';
 
 import 'package:uytaza/screen/order/orders_screen.dart';
@@ -25,24 +26,15 @@ class _MainTabPageState extends State<MainTabPage> {
     _selectedIndex = widget.initialIndex;
   }
 
-  void _updateUser() {
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      HomeScreen(
-        onProfileTap: () {
-          setState(() {
-            _selectedIndex = 3;
-          });
-        },
-      ),
-      ChatMessageScreen(),
-      OrdersScreen(),
-      ProfileScreen(),
+      const HomeScreen(),
+      const ChatMessageScreen(),
+      const OrdersScreen(),
+      const ProfileScreen(),
     ];
+
     final List<String> icons = [
       "assets/img/home_icon.png",
       "assets/img/message_icon.png",
