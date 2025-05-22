@@ -12,6 +12,7 @@ import 'package:uytaza/screen/login/sign_up_screen.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
 
 import '../home/home_screen.dart';
+import '../main/main_tab_page.dart';
 import 'api_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _SignInScreenState extends State<SignInScreen> {
         if (jsonDecode(validationResponse.body)['reset_required'] == true) {
           context.push(TemporaryPasswordChangeScreen());
         } else {
-          context.push(HomeScreen());
+          context.push(MainTabPage());
         }
       } else {
         final error = jsonDecode(response.body)['error'];
@@ -120,7 +121,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         right: IconButton(
                           onPressed: () {
                             setState(
-                              () => isPasswordVisible = !isPasswordVisible,
+                                  () => isPasswordVisible = !isPasswordVisible,
                             );
                           },
                           icon: Icon(
@@ -230,7 +231,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (googleUser == null) return;
 
       final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      await googleUser.authentication;
 
       final response = await ApiService.post('/api/auth/google-login', {
         'id_token': googleAuth.idToken,
@@ -240,7 +241,7 @@ class _SignInScreenState extends State<SignInScreen> {
         final token = jsonDecode(response.body)['token'];
         await ApiService.saveToken(token);
 
-        context.push(HomeScreen());
+        context.push(MainTabPage());
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
