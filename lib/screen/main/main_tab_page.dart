@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/home/home_screen.dart';
 import 'package:uytaza/screen/message/chat_message_screen.dart';
-
-import 'package:uytaza/screen/message/message_screen.dart';
-
-import 'package:uytaza/screen/order/orders_screen.dart';
-import 'package:uytaza/screen/profile/profile_screen.dart';
+import 'package:uytaza/screen/profile/profile_router_screen.dart';
+import 'package:uytaza/screen/order/client/orders_screen.dart';
+import 'package:uytaza/screen/order/cleaner/cleaner_orders_screen.dart';
+import 'package:uytaza/screen/profile/client/client_profile_screen.dart';
+import 'package:uytaza/screen/profile/cleaner/cleaner_profile_screen.dart';
 
 class MainTabPage extends StatefulWidget {
   final int initialIndex;
@@ -20,6 +20,9 @@ class MainTabPage extends StatefulWidget {
 class _MainTabPageState extends State<MainTabPage> {
   late int _selectedIndex;
 
+  // Мок роли — поменяй здесь на 'cleaner' или 'client', чтобы проверить
+  String userRole = 'client'; // например 'client' или 'cleaner'
+
   @override
   void initState() {
     super.initState();
@@ -28,11 +31,22 @@ class _MainTabPageState extends State<MainTabPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Выбираем экран заказов в зависимости от роли пользователя
+    final Widget ordersPage =
+        userRole == 'cleaner'
+            ? const CleanerOrdersScreen()
+            : const OrdersScreen();
+
+    final Widget profilePage =
+        userRole == 'cleaner'
+            ? const CleanerProfileScreen()
+            : const ClientProfileScreen();
+
     final List<Widget> pages = [
       const HomeScreen(),
       const ChatMessageScreen(),
-      const OrdersScreen(),
-      const ProfileScreen(),
+      ordersPage, // динамический экран заказов
+      profilePage, // **здесь используй profilePage, а не ProfileRouterScreen()**
     ];
 
     final List<String> icons = [

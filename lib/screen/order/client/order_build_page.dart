@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 
-import 'package:uytaza/screen/order/calendar_page.dart';
+import 'package:uytaza/screen/order/client/calendar_page.dart';
 
 class OrderBuildPage extends StatefulWidget {
   const OrderBuildPage({super.key});

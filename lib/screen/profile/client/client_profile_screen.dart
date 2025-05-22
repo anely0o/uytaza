@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
+import 'package:uytaza/screen/order/client/rate_for_service_user_screen.dart';
+import 'package:uytaza/screen/profile/client/choose_address_screen.dart';
+import 'package:uytaza/screen/profile/client/subscription_screen.dart';
 
 import 'settings_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class ClientProfileScreen extends StatefulWidget {
+  const ClientProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ClientProfileScreen> createState() => _ClientProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ClientProfileScreenState extends State<ClientProfileScreen> {
   final TextEditingController firstNameController = TextEditingController(
     text: "John",
   );
@@ -77,7 +80,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Subscription Plan",
                     value: subscriptionController.text,
                     onTap: () {
-                      // TODO: open subscription screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SubscriptionScreen(),
+                        ),
+                      );
                     },
                   ),
                   _buildClickableTile(
@@ -85,6 +93,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Address",
                     value: addressController.text,
                     onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChooseAddressScreen(),
+                        ),
+                      );
                       // TODO: open address selector
                     },
                   ),
@@ -143,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
           GestureDetector(
-            onTap: () => _editNameDialog,
+            onTap: _editNameDialog,
             child: Text(
               "${firstNameController.text} ${lastNameController.text}",
               style: const TextStyle(
