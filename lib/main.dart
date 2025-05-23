@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
+import 'package:uytaza/screen/home/home_screen.dart';
 import 'package:uytaza/screen/login/splash_screen.dart';
+import 'package:uytaza/screen/main/main_tab_page.dart';
+import 'package:uytaza/screen/profile/rate_of_service_screen.dart';
 
 void main() {
   runApp(const MyApp());

@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+/* import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/models/order_model.dart';
 
-import 'package:uytaza/screen/order/payment_method._screen.dart';
+import 'package:uytaza/screen/order/client/payment_method_screen.dart';
 
 class CalendarPage extends StatefulWidget {
   final String cleaningType;
@@ -223,9 +223,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                    builder:
-                                        (context) =>
-                                            PaymentMethodScreen(order: order),
+                                    builder: (context) => PaymentMethodScreen(),
                                   ),
                                 );
                               }
@@ -255,3 +253,4 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 }
+ */

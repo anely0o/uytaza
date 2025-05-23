@@ -1,19 +1,19 @@
-import 'dart:convert';
+//import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
+//import 'package:google_sign_in/google_sign_in.dart';
+//import 'package:http/http.dart' as http;
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
-import 'package:uytaza/screen/home/choose_service_screen.dart';
 import 'package:uytaza/screen/login/sign_up_screen.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
+import 'package:uytaza/screen/main/main_tab_page.dart';
 
 import '../home/home_screen.dart';
-import '../main/main_tab_page.dart';
-import 'api_service.dart';
+
+//import 'api_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -37,8 +37,17 @@ class _SignInScreenState extends State<SignInScreen> {
       );
       return;
     }
+    //заглушка вместо авторизации
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Signed in successfully")));
 
-    try {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const MainTabPage(initialIndex: 0)),
+    );
+
+    /*     try {
       final response = await ApiService.post('/api/auth/login', {
         'email': email,
         'password': password,
@@ -69,7 +78,41 @@ class _SignInScreenState extends State<SignInScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Login failed: ${e.toString()}')));
+    } */
+  }
+
+  //заглушка
+  void _handleForgotPassword() {
+    final email = txtEmail.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter your email first")),
+      );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Temporary password sent (stub)")),
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TemporaryPasswordChangeScreen(),
+      ),
+    );
+  }
+
+  void _handleGoogleSignIn() {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Google Sign-In simulated")));
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MainTabPage()),
+    );
   }
 
   @override
@@ -121,7 +164,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         right: IconButton(
                           onPressed: () {
                             setState(
-                                  () => isPasswordVisible = !isPasswordVisible,
+                              () => isPasswordVisible = !isPasswordVisible,
                             );
                           },
                           icon: Icon(
@@ -185,7 +228,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  void _handleForgotPassword() async {
+  /*  void _handleForgotPassword() async {
     final email = txtEmail.text.trim();
 
     if (email.isEmpty) {
@@ -241,12 +284,13 @@ class _SignInScreenState extends State<SignInScreen> {
         final token = jsonDecode(response.body)['token'];
         await ApiService.saveToken(token);
 
-        context.push(MainTabPage());
+
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Google Sign-In failed: ${e.toString()}')),
       );
     }
-  }
+
+  } */
 }
