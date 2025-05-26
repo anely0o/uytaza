@@ -16,15 +16,26 @@ class ClientProfileScreen extends StatefulWidget {
 }
 
 class _ClientProfileScreenState extends State<ClientProfileScreen> {
+  //gamifications
+  final int _points = 250; // TODO: real user points from backend
+  late final int _level;
+  late final String _levelName;
+  late final double _progressToNext;
+  final List<String> _levelNames = [
+    'Dust Novice',
+    'Sparkling Specialist',
+    'Pristime Pro',
+    'Sterling Steward',
+    'Imaculate Master',
+  ];
+
   final TextEditingController firstNameController = TextEditingController(
     text: "John",
   );
   final TextEditingController lastNameController = TextEditingController(
     text: "Doe",
   );
-  final TextEditingController roleController = TextEditingController(
-    text: "Client",
-  );
+
   final TextEditingController addressController = TextEditingController(
     text: "Choose your address",
   );
@@ -37,6 +48,21 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   final TextEditingController subscriptionController = TextEditingController(
     text: "Choose your plan",
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateGamification();
+  }
+
+  void _calculateGamification() {
+    _level = (_points ~/ 100) + 1;
+    _levelName =
+        _level <= _levelNames.length
+            ? _levelNames[_level - 1]
+            : 'Imaculate Master';
+    _progressToNext = (_points % 100) / 100;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,8 +195,28 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            roleController.text,
+            "$_levelName (Lvl $_level)",
             style: const TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: _progressToNext),
+              duration: const Duration(seconds: 1),
+              builder: (context, value, child) {
+                return LinearProgressIndicator(
+                  value: value,
+                  backgroundColor: Colors.white24,
+                  valueColor: AlwaysStoppedAnimation<Color>(TColor.secondary),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "${(_progressToNext * 100).toStringAsFixed(0)}% to next level",
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 12),
         ],
