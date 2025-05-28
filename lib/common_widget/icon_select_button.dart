@@ -24,7 +24,7 @@ class IconSelectButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelect ? TColor.primary : Colors.white,
           borderRadius: BorderRadius.circular(60),
-          boxShadow: const [BoxShadow(color: Colors.black12)],
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
         ),
         child: Image.asset(
           icon,

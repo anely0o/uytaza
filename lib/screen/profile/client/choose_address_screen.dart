@@ -47,20 +47,16 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
 
         _mapController.move(_selectedLocation!, 16);
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Address not found")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Address not found")),
+        );
       }
     }
   }
 
   void _saveLocation() {
-    if (_selectedLocation != null && _selectedAddress != null) {
-      Navigator.pop(context, {
-        'lat': _selectedLocation!.latitude,
-        'lon': _selectedLocation!.longitude,
-        'address': _selectedAddress!,
-      });
+    if (_selectedAddress != null) {
+      Navigator.pop(context, _selectedAddress!);
     }
   }
 
@@ -99,7 +95,6 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
       ),
       body: Column(
         children: [
-          // Поисковая строка
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
@@ -138,8 +133,6 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
               ],
             ),
           ),
-
-          // Карта
           Expanded(
             child: Stack(
               alignment: Alignment.center,
@@ -153,7 +146,7 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
                   children: [
                     TileLayer(
                       urlTemplate:
-                          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                       userAgentPackageName: "com.example.uytaza",
                     ),
                     if (_selectedLocation != null)
@@ -176,8 +169,6 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
               ],
             ),
           ),
-
-          // Отображение адреса и кнопка сохранения
           if (_selectedAddress != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

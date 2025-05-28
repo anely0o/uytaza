@@ -1,19 +1,14 @@
-//import 'dart:convert';
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
-//import 'package:google_sign_in/google_sign_in.dart';
-//import 'package:http/http.dart' as http;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
 import 'package:uytaza/screen/login/sign_up_screen.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
-import 'package:uytaza/screen/main/main_tab_page.dart';
-
-import '../home/home_screen.dart';
-
-//import 'api_service.dart';
+import 'api_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -26,95 +21,107 @@ class _SignInScreenState extends State<SignInScreen> {
   final txtEmail = TextEditingController();
   final txtPassword = TextEditingController();
   bool isPasswordVisible = false;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  void _handleSignIn() async {
+  // ────────── EMAIL / PASSWORD ──────────
+  Future<void> _handleSignIn() async {
     final email = txtEmail.text.trim();
     final password = txtPassword.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter email and password")),
-      );
+      _show('Please enter email and password');
       return;
     }
-    //заглушка вместо авторизации
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Signed in successfully")));
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const MainTabPage(initialIndex: 0)),
-    );
-
-    /*     try {
-      final response = await ApiService.post('/api/auth/login', {
+    try {
+      final res = await ApiService.post('/api/auth/login', {
         'email': email,
         'password': password,
       });
 
-      if (response.statusCode == 200) {
-        final token = jsonDecode(response.body)['token'];
+      if (res.statusCode == 200) {
+        final token = jsonDecode(res.body)['token'];
         await ApiService.saveToken(token);
 
-        // Check if password needs to be changed
-        final validationResponse = await http.get(
+        final vRes = await http.get(
           Uri.parse('${ApiService.baseUrl}/api/auth/validate'),
           headers: {'Authorization': 'Bearer $token'},
         );
 
-        if (jsonDecode(validationResponse.body)['reset_required'] == true) {
-          context.push(TemporaryPasswordChangeScreen());
+        final reset = jsonDecode(vRes.body)['reset_required'] == true;
+
+        if (reset) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const TemporaryPasswordChangeScreen(),
+            ),
+          );
         } else {
-          context.push(MainTabPage());
+          // ⬇️ переходим на главный экран
+          Navigator.pushNamedAndRemoveUntil(context, '/main', (_) => false);
         }
       } else {
-        final error = jsonDecode(response.body)['error'];
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error)));
+        _show(jsonDecode(res.body)['error'] ?? 'Error');
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Login failed: ${e.toString()}')));
-    } */
+      _show('Login failed: $e');
+    }
   }
 
-  //заглушка
-  void _handleForgotPassword() {
+  // ────────── FORGOT PASSWORD ──────────
+  Future<void> _handleForgotPassword() async {
     final email = txtEmail.text.trim();
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter your email first")),
-      );
+      _show('Please enter your email first');
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Temporary password sent (stub)")),
-    );
+    try {
+      final res = await ApiService.post('/api/auth/resend-password', {
+        'email': email,
+      });
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TemporaryPasswordChangeScreen(),
-      ),
-    );
+      if (res.statusCode == 200) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TemporaryPasswordChangeScreen(),
+          ),
+        );
+      } else {
+        _show(jsonDecode(res.body)['error'] ?? 'Error');
+      }
+    } catch (e) {
+      _show('Failed: $e');
+    }
   }
 
-  void _handleGoogleSignIn() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Google Sign-In simulated")));
+  // ────────── GOOGLE SIGN-IN ──────────
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MainTabPage()),
-    );
+      final googleAuth = await googleUser.authentication;
+      final res = await ApiService.post('/api/auth/google-login', {
+        'id_token': googleAuth.idToken,
+      });
+
+      if (res.statusCode == 200) {
+        final token = jsonDecode(res.body)['token'];
+        await ApiService.saveToken(token);
+        Navigator.pushNamedAndRemoveUntil(context, '/main', (_) => false);
+      } else {
+        _show(jsonDecode(res.body)['error'] ?? 'Google login error');
+      }
+    } catch (e) {
+      _show('Google Sign-In failed: $e');
+    }
   }
 
+  // ────────── UI ──────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -122,100 +129,21 @@ class _SignInScreenState extends State<SignInScreen> {
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: Image.asset("assets/img/bg.png", fit: BoxFit.cover),
+            child: Image.asset('assets/img/bg.png', fit: BoxFit.cover),
           ),
           SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
                 const SizedBox(height: 40),
-                Image.asset("assets/img/logo.png", width: context.width * 0.5),
+                Image.asset('assets/img/logo.png', width: context.width * 0.5),
                 const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 4),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        "Sign In",
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: TColor.title,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      RoundTextfield(
-                        hintText: "Email",
-                        keyboardType: TextInputType.emailAddress,
-                        controller: txtEmail,
-                      ),
-                      const SizedBox(height: 16),
-                      RoundTextfield(
-                        hintText: "Password",
-                        obscureText: !isPasswordVisible,
-                        controller: txtPassword,
-                        right: IconButton(
-                          onPressed: () {
-                            setState(
-                              () => isPasswordVisible = !isPasswordVisible,
-                            );
-                          },
-                          icon: Icon(
-                            isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: TColor.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: _handleForgotPassword,
-                          child: const Text(
-                            "Forgot Password?",
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      RoundButton(
-                        title: "SIGN IN",
-                        fontWeight: FontWeight.bold,
-                        onPressed: _handleSignIn,
-                      ),
-
-                      const SizedBox(height: 10),
-                      Text(
-                        "Or Sign In with",
-                        style: TextStyle(color: TColor.placeholder),
-                      ),
-                      const SizedBox(height: 10),
-                      InkWell(
-                        onTap: _handleGoogleSignIn,
-                        child: Image.asset("assets/img/google.png", width: 50),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildCard(context),
                 const SizedBox(height: 10),
-                Text(
-                  "Don't have an account?",
-                  style: TextStyle(color: TColor.primaryText),
-                ),
+                Text('Don\'t have an account?',
+                    style: TextStyle(color: TColor.primaryText)),
                 RoundButton(
-                  title: "SIGN UP",
+                  title: 'SIGN UP',
                   width: context.width * 0.65,
                   type: RoundButtonType.line,
                   onPressed: () => context.push(const SignUpScreen()),
@@ -228,69 +156,69 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  /*  void _handleForgotPassword() async {
-    final email = txtEmail.text.trim();
-
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter your email first")),
-      );
-      return;
-    }
-
-    try {
-      final response = await ApiService.post('/api/auth/resend-password', {
-        'email': email,
-      });
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Temporary password sent to your email"),
+  Widget _buildCard(BuildContext ctx) => Container(
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(25),
+      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+    ),
+    child: Column(
+      children: [
+        Text('Sign In',
+            style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: TColor.title)),
+        const SizedBox(height: 16),
+        RoundTextfield(
+          hintText: 'Email',
+          keyboardType: TextInputType.emailAddress,
+          controller: txtEmail,
+        ),
+        const SizedBox(height: 16),
+        RoundTextfield(
+          hintText: 'Password',
+          obscureText: !isPasswordVisible,
+          controller: txtPassword,
+          right: IconButton(
+            onPressed: () => setState(() {
+              isPasswordVisible = !isPasswordVisible;
+            }),
+            icon: Icon(
+              isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+              color: TColor.primary,
+            ),
           ),
-        );
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _handleForgotPassword,
+            child: const Text('Forgot Password?',
+                style:
+                TextStyle(color: Colors.blue, fontWeight: FontWeight.w500)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        RoundButton(
+          title: 'SIGN IN',
+          fontWeight: FontWeight.bold,
+          onPressed: _handleSignIn,
+        ),
+        const SizedBox(height: 10),
+        Text('Or Sign In with', style: TextStyle(color: TColor.placeholder)),
+        const SizedBox(height: 10),
+        InkWell(
+          onTap: _handleGoogleSignIn,
+          child: Image.asset('assets/img/google.png', width: 50),
+        ),
+      ],
+    ),
+  );
 
-        // Переход на экран смены пароля
-
-        context.push(TemporaryPasswordChangeScreen());
-      } else {
-        final error = jsonDecode(response.body)['error'];
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error)));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed: ${e.toString()}')));
-    }
-  }
-
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-
-  void _handleGoogleSignIn() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
-
-      final response = await ApiService.post('/api/auth/google-login', {
-        'id_token': googleAuth.idToken,
-      });
-
-      if (response.statusCode == 200) {
-        final token = jsonDecode(response.body)['token'];
-        await ApiService.saveToken(token);
-
-
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-In failed: ${e.toString()}')),
-      );
-    }
-
-  } */
+  // ────────── helper ──────────
+  void _show(String msg) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(msg)));
 }
