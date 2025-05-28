@@ -58,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const SignInScreen()),
-      (route) => false,
+          (route) => false,
     );
   }
 
@@ -66,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const SignInScreen()),
-      (route) => true,
+          (route) => true,
     );
   }
 

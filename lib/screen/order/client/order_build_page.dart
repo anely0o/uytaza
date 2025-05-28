@@ -1,3 +1,4 @@
+// lib/screen/order/client/order_build_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -309,28 +310,11 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       const Text('Cleaning Type',
           style: TextStyle(fontWeight: FontWeight.w600)),
       const SizedBox(height: 10),
-      SizedBox(
-        height: 180, // Высота карусели
-        child: PageView.builder(
-          itemCount: 3, // Количество типов уборки
-          controller: PageController(viewportFraction: 0.8),
-          padEnds: false,
-          itemBuilder: (context, index) {
-            // Определяем параметры для каждого типа
-            final types = [
-              {'id': 'custom', 'label': 'Custom', 'img': 'assets/img/custom_service.png'},
-              {'id': 'initial', 'label': 'Initial', 'img': 'assets/img/initial_service.png'},
-              {'id': 'standard', 'label': 'Standard', 'img': 'assets/img/carpet_service.png'},
-            ];
-            final type = types[index];
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: _typeCard(type['id']!, type['label']!, type['img']!),
-            );
-          },
-        ),
-      ),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        _typeCard('custom',   'Custom',   'assets/img/custom_service.png'),
+        _typeCard('initial',   'Initial',   'assets/img/initial_service.png'),
+        _typeCard('standard', 'Standard', 'assets/img/carpet_service.png'),
+      ]),
     ],
   );
 
@@ -340,8 +324,8 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       onTap: () => setState(() => selectedType = type),
       child: Column(children: [
         Container(
-          height: 140, // Увеличил высоту для лучшего отображения в карусели
-          width: double.infinity,
+          height: 120,
+          width: MediaQuery.of(context).size.width * .43,
           decoration: BoxDecoration(
             color: sel ? TColor.secondary.withOpacity(.2) : Colors.grey[200],
             borderRadius: BorderRadius.circular(20),
@@ -360,7 +344,6 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       ]),
     );
   }
-
 
   Widget _buildServices() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,8 +1,10 @@
+// lib/screen/profile/cleaner/cleaner_profile_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/screen/login/api_service.dart';
-import 'dart:convert';
 
 class CleanerProfileScreen extends StatefulWidget {
   const CleanerProfileScreen({super.key});
@@ -13,191 +15,167 @@ class CleanerProfileScreen extends StatefulWidget {
 
 class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   bool _loading = true;
-  bool _isEditing = false;
+  bool _editing = false;
 
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  String _role = 'Cleaner';
+  final _nameCtl  = TextEditingController();
+  final _emailCtl = TextEditingController();
+  final _phoneCtl = TextEditingController();
   double? _rating;
 
+  //--------------------------------------------------------
   @override
   void initState() {
     super.initState();
-    _loadProfile();
-    _loadRating();
+    _fetchAll();
+  }
+
+  Future<void> _fetchAll() async {
+    setState(() => _loading = true);
+    await Future.wait([_loadProfile(), _loadRating()]);
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _loadProfile() async {
-    setState(() => _loading = true);
     try {
-      final res = await ApiService.getWithToken('/api/auth/profile');
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        setState(() {
-          _nameController.text = data['first_name'] ?? '';
-          _emailController.text = data['email'] ?? '';
-          _phoneController.text = data['phone_number'] ?? '';
-          _role = data['role'] ?? 'Cleaner';
-        });
+      final r = await ApiService.getWithToken(ApiRoutes.cleanerProfile);
+      if (r.statusCode == 200) {
+        final m = jsonDecode(r.body);
+        _nameCtl .text = m['first_name'] ?? '';
+        _emailCtl.text = m['email']      ?? '';
+        _phoneCtl.text = m['phone_number'] ?? '';
       } else {
-        _showError('Failed to load profile (${res.statusCode})');
+        _show('Profile HTTP ${r.statusCode}');
       }
     } catch (e) {
-      _showError('Error loading profile: $e');
-    } finally {
-      setState(() => _loading = false);
+      _show('Profile error: $e');
     }
   }
 
   Future<void> _loadRating() async {
     try {
-      final res = await ApiService.getWithToken('/api/auth/rating');
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        setState(() => _rating = double.tryParse(data['rating'].toString()));
-      } else {
-        _showError('Failed to load rating (${res.statusCode})');
+      final r = await ApiService.getWithToken(ApiRoutes.cleanerRating);
+      if (r.statusCode == 200) {
+        final v = jsonDecode(r.body)['rating'];
+        _rating = double.tryParse(v.toString());
       }
-    } catch (e) {
-      _showError('Error loading rating: $e');
-    }
+    } catch (_) {/* игнор */}
   }
 
-  Future<void> _updateProfile() async {
+  Future<void> _save() async {
     FocusScope.of(context).unfocus();
     setState(() => _loading = true);
     final body = {
-      'first_name': _nameController.text.trim(),
-      'phone_number': _phoneController.text.trim(),
+      'first_name'  : _nameCtl.text.trim(),
+      'phone_number': _phoneCtl.text.trim(),
     };
     try {
-      final res = await ApiService.putWithToken('/api/auth/profile', body);
-      if (res.statusCode == 200) {
-        _showMessage('Profile updated successfully');
-        setState(() => _isEditing = false);
+      final r = await ApiService.putWithToken(ApiRoutes.cleanerProfile, body);
+      if (r.statusCode == 200) {
+        _show('Profile updated');
+        setState(() => _editing = false);
       } else {
-        final data = jsonDecode(res.body) as Map<String, dynamic>?;
-        _showError(data?['error'] ?? 'Update failed (${res.statusCode})');
+        _show('Save HTTP ${r.statusCode}');
       }
     } catch (e) {
-      _showError('Error updating profile: $e');
+      _show('Save error: $e');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
+  //--------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return Scaffold(
-        backgroundColor: TColor.primary,
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
       );
     }
+
     return Scaffold(
-      backgroundColor: TColor.primary,
-      body: Column(
+      backgroundColor: TColor.background,
+      appBar: AppBar(
+        backgroundColor: TColor.card,
+        elevation: 1,
+        centerTitle: true,
+        title: Text('Profile',
+            style: TextStyle(
+                color: TColor.primaryText, fontWeight: FontWeight.bold)),
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
-          _buildHeader(),
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    _buildTextField('Name', _nameController, !_isEditing),
-                    const SizedBox(height: 16),
-                    _buildTextField('Email', _emailController, true),
-                    const SizedBox(height: 16),
-                    _buildTextField('Phone Number', _phoneController, !_isEditing),
-                    const SizedBox(height: 24),
-                    RoundButton(
-                      title: _isEditing ? 'Save' : 'Edit Profile',
-                      onPressed: () {
-                        if (_isEditing) {
-                          _updateProfile();
-                        } else {
-                          setState(() => _isEditing = true);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          _avatarBlock(),
+          const SizedBox(height: 24),
+          _field(label: 'Name',  ctl: _nameCtl,  enable: _editing),
+          const SizedBox(height: 16),
+          _field(label: 'Email', ctl: _emailCtl, enable: false),
+          const SizedBox(height: 16),
+          _field(label: 'Phone', ctl: _phoneCtl, enable: _editing),
+          const SizedBox(height: 30),
+          RoundButton(
+            title : _editing ? 'Save' : 'Edit profile',
+            onPressed: _editing ? _save : () => setState(() => _editing = true),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return SafeArea(
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        color: TColor.primary,
-        child: Row(
-          children: [
-            const CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 50, color: Colors.grey)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _nameController.text.isNotEmpty ? _nameController.text : 'No Name',
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _role,
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  if (_rating != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Rating: ${_rating!.toStringAsFixed(1)} / 5',
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  //--------------------------------------------------------
+  Widget _avatarBlock() => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: TColor.card,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: TColor.softShadow,
+    ),
+    child: Row(
+      children: [
+        const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_nameCtl.text.isEmpty ? 'No name' : _nameCtl.text,
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: TColor.primaryText)),
+                const SizedBox(height: 4),
+                if (_rating != null)
+                  Row(children: [
+                    Icon(Icons.star, color: Colors.amber[600], size: 18),
+                    const SizedBox(width: 4),
+                    Text('${_rating!.toStringAsFixed(1)} / 5',
+                        style: TextStyle(color: TColor.secondaryText)),
+                  ]),
+              ]),
+        )
+      ],
+    ),
+  );
 
-  Widget _buildTextField(String label, TextEditingController controller, bool enabled) {
-    return TextField(
-      controller: controller,
-      enabled: enabled,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-    );
-  }
+  Widget _field(
+      {required String label,
+        required TextEditingController ctl,
+        required bool enable}) =>
+      TextField(
+        controller: ctl,
+        enabled: enable,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder:
+          OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+
+  void _show(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 }

@@ -128,9 +128,6 @@ class _SignInScreenState extends State<SignInScreen> {
       body: Stack(
         alignment: Alignment.center,
         children: [
-          Positioned.fill(
-            child: Image.asset('assets/img/bg.png', fit: BoxFit.cover),
-          ),
           SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -183,6 +184,20 @@ class ApiService {
   static Future<bool> isPasswordResetRequired() async {
     final payload = await getTokenPayload();
     return payload?['reset_required'] == true;
+  }
+  static Future<http.Response> postMultipart(
+      String endpoint, {
+        required String fileField,
+        required File file,
+        Map<String, String>? fields,
+      }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final req = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer ${await getToken()}';
+    req.files.add(await http.MultipartFile.fromPath(fileField, file.path));
+    fields?.forEach((k, v) => req.fields[k] = v);
+    final streamed = await req.send();
+    return http.Response.fromStream(streamed);
   }
 
 }

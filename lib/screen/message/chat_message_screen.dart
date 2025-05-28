@@ -1,3 +1,5 @@
+// 📄 ChatMessageScreen.dart — Обновлённый стиль
+
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
@@ -15,270 +17,136 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.primary,
+      backgroundColor: TColor.background,
       appBar: AppBar(
-        backgroundColor: TColor.primary,
-        elevation: 0,
+        backgroundColor: TColor.card,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           children: [
-            Image.asset(
-              "assets/img/only_logo.png",
-              height: 100,
-              fit: BoxFit.fitHeight,
+            const CircleAvatar(
+              backgroundImage: AssetImage("assets/img/user_placeholder.png"),
+              radius: 20,
             ),
+            const SizedBox(width: 12),
+            Text("Adviser",
+                style: TextStyle(
+                    color: TColor.primaryText,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              context.pop();
-            },
-            icon: Image.asset("assets/img/back.png"),
-          ),
-        ],
-        leading: IconButton(
-          onPressed: () {},
-          icon: Image.asset("assets/img/menu.png", width: 20, height: 20),
-        ),
       ),
-      body: Stack(
-        alignment: Alignment.bottomCenter,
+      body: Column(
         children: [
-          Container(
-            width: double.maxFinite,
-            height: context.height * 0.75,
-            decoration: BoxDecoration(
-              color: TColor.secondary,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(35),
-                child: Image.asset(
-                  "assets/img/user_placeholder.png",
-                  width: 70,
-                  height: 70,
-                  fit: BoxFit.cover,
-                ),
-              ),
-
-              const Text(
-                "Adviser",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 20,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 2),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 15,
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 10,
+              itemBuilder: (context, index) {
+                bool isSender = index % 2 == 0;
+                return Align(
+                  alignment: isSender
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    constraints:
+                    BoxConstraints(maxWidth: context.width * 0.7),
+                    decoration: BoxDecoration(
+                      color: isSender
+                          ? TColor.primary.withOpacity(0.85)
+                          : TColor.card,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft:
+                        Radius.circular(isSender ? 16 : 0),
+                        bottomRight:
+                        Radius.circular(isSender ? 0 : 16),
                       ),
-                      itemBuilder: (context, index) {
-                        bool isSender = index % 2 == 1;
-
-                        return Row(
-                          mainAxisAlignment:
-                              isSender
-                                  ? MainAxisAlignment.end
-                                  : MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (!isSender) ...[
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "12:12",
-                                  style: TextStyle(
-                                    color: TColor.placeholder,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                            ],
-
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 15,
-                                vertical: 15,
-                              ),
-                              constraints: BoxConstraints(
-                                maxWidth: context.width * 0.50,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    isSender
-                                        ? TColor.chatTextBG
-                                        : TColor.chatTextBG2,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(30),
-                                  topRight: Radius.circular(30),
-                                  bottomLeft: Radius.circular(
-                                    isSender ? 30 : 0,
-                                  ),
-                                  bottomRight: Radius.circular(
-                                    !isSender ? 30 : 0,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                isSender
-                                    ? "Hello! 👋\n\n"
-                                        "Thank you for reaching out to our cleaning service. \n\n"
-                                        "We’re here to assist you with any questions, issues, or requests you may have.\n\n"
-                                        "Our team is available from 9:00 AM to 6:00 PM (Mon–Sat) and will get back to you as soon as possible.\nn"
-                                    : "Hi ",
-                                style: TextStyle(
-                                  color:
-                                      isSender
-                                          ? Colors.white
-                                          : TColor.primaryText,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            if (isSender) ...[
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "12:12",
-                                  style: TextStyle(
-                                    color: TColor.placeholder,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        );
-                      },
-                      separatorBuilder:
-                          (context, index) => const SizedBox(height: 15),
-                      itemCount: 10,
+                      boxShadow: TColor.softShadow,
                     ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(color: TColor.secondary),
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
-          top: 18,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  PopupLayout(
-                    bgColor: Colors.black12,
-                    child: ImagePickerScreen(
-                      didSelect: (selectPath) {
-                        debugPrint(selectPath);
-                      },
+                    child: Text(
+                      isSender ? "Thank you for contacting us!" : "Hello!",
+                      style: TextStyle(
+                        color: isSender ? Colors.white : TColor.primaryText,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 );
               },
-              child: Container(
-                height: 55,
-                width: 55,
-                decoration: BoxDecoration(
-                  color: TColor.primary,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                alignment: Alignment.center,
-                child: Image.asset(
-                  "assets/img/camera.png",
-                  width: 30,
-                  height: 30,
-                ),
-              ),
             ),
-            const SizedBox(width: 8),
-
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 100),
-                        child: TextField(
-                          maxLines: null,
-                          autocorrect: false,
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.all(12),
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            hintText: "Type Message here",
-                            hintStyle: TextStyle(
-                              color: TColor.placeholder,
-                              fontSize: 15,
-                            ),
-                          ),
-                          style: TextStyle(
-                            color: TColor.primaryText,
-                            fontSize: 15,
-                          ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      PopupLayout(
+                        bgColor: Colors.black12,
+                        child: ImagePickerScreen(
+                          didSelect: (selectPath) {
+                            debugPrint(selectPath);
+                          },
                         ),
                       ),
+                    );
+                  },
+                  child: Container(
+                    height: 48,
+                    width: 48,
+                    decoration: BoxDecoration(
+                      color: TColor.primary,
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    TextButton(
-                      onPressed: () {},
-                      child: Image.asset(
-                        "assets/img/send.png",
-                        height: 35,
-                        width: 35,
-                      ),
-                    ),
-                  ],
+                    child: const Icon(Icons.camera_alt_rounded,
+                        color: Colors.white),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: TColor.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: "Type your message",
+                              hintStyle: TextStyle(
+                                  color: TColor.placeholder, fontSize: 14),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.send_rounded,
+                              color: TColor.primary),
+                          onPressed: () {},
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          )
+        ],
       ),
     );
   }
