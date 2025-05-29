@@ -12,251 +12,156 @@ class ChatMessageScreen extends StatefulWidget {
 }
 
 class _ChatMessageScreenState extends State<ChatMessageScreen> {
+  final TextEditingController _subjectController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.primary,
+      backgroundColor: TColor.secondary,
       appBar: AppBar(
         backgroundColor: TColor.primary,
         elevation: 0,
         title: Row(
           children: [
-            Image.asset(
-              "assets/img/only_logo.png",
-              height: 100,
-              fit: BoxFit.fitHeight,
+            const CircleAvatar(
+              backgroundImage: AssetImage("assets/img/user_placeholder.png"),
+              radius: 18,
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  "Asel Sadvakasova",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  "Manager",
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              context.pop();
-            },
-            icon: Image.asset("assets/img/back.png"),
-          ),
-        ],
-        leading: IconButton(
-          onPressed: () {},
-          icon: Image.asset("assets/img/menu.png", width: 20, height: 20),
-        ),
       ),
-      body: Stack(
-        alignment: Alignment.bottomCenter,
+      body: Column(
         children: [
-          Container(
-            width: double.maxFinite,
-            height: context.height * 0.75,
-            decoration: BoxDecoration(
-              color: TColor.secondary,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(35),
-                child: Image.asset(
-                  "assets/img/user_placeholder.png",
-                  width: 70,
-                  height: 70,
-                  fit: BoxFit.cover,
-                ),
-              ),
-
-              const Text(
-                "Adviser",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 20,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 2),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30),
-                    child: ListView.separated(
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: ListView.separated(
+                padding: const EdgeInsets.only(bottom: 12),
+                itemCount: 2,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  bool isSender = index % 2 == 0;
+                  return Align(
+                    alignment:
+                        isSender ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 15,
+                        horizontal: 16,
+                        vertical: 12,
                       ),
-                      itemBuilder: (context, index) {
-                        bool isSender = index % 2 == 1;
-
-                        return Row(
-                          mainAxisAlignment:
-                              isSender
-                                  ? MainAxisAlignment.end
-                                  : MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (!isSender) ...[
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "12:12",
-                                  style: TextStyle(
-                                    color: TColor.placeholder,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                            ],
-
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 15,
-                                vertical: 15,
-                              ),
-                              constraints: BoxConstraints(
-                                maxWidth: context.width * 0.50,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    isSender
-                                        ? TColor.chatTextBG
-                                        : TColor.chatTextBG2,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(30),
-                                  topRight: Radius.circular(30),
-                                  bottomLeft: Radius.circular(
-                                    isSender ? 30 : 0,
-                                  ),
-                                  bottomRight: Radius.circular(
-                                    !isSender ? 30 : 0,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                isSender
-                                    ? "Hello! 👋\n\n"
-                                        "Thank you for reaching out to our cleaning service. \n\n"
-                                        "We’re here to assist you with any questions, issues, or requests you may have.\n\n"
-                                        "Our team is available from 9:00 AM to 6:00 PM (Mon–Sat) and will get back to you as soon as possible.\nn"
-                                    : "Hi ",
-                                style: TextStyle(
-                                  color:
-                                      isSender
-                                          ? Colors.white
-                                          : TColor.primaryText,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            if (isSender) ...[
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  "12:12",
-                                  style: TextStyle(
-                                    color: TColor.placeholder,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        );
-                      },
-                      separatorBuilder:
-                          (context, index) => const SizedBox(height: 15),
-                      itemCount: 10,
+                      constraints: BoxConstraints(
+                        maxWidth: context.width * 0.7,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isSender ? TColor.chatTextBG : TColor.chatTextBG2,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        isSender
+                            ? "Hello! "
+                            : "Hello! \u{1F44B}\nThank you for reaching out to our cleaning service. We’re here to help.",
+                        style: TextStyle(
+                          color: isSender ? Colors.white : TColor.primaryText,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(color: TColor.secondary),
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
-          top: 18,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  PopupLayout(
-                    bgColor: Colors.black12,
-                    child: ImagePickerScreen(
-                      didSelect: (selectPath) {
-                        debugPrint(selectPath);
-                      },
-                    ),
-                  ),
-                );
-              },
-              child: Container(
-                height: 55,
-                width: 55,
-                decoration: BoxDecoration(
-                  color: TColor.primary,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                alignment: Alignment.center,
-                child: Image.asset(
-                  "assets/img/camera.png",
-                  width: 30,
-                  height: 30,
-                ),
+                  );
+                },
               ),
             ),
-            const SizedBox(width: 8),
-
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 100),
-                        child: TextField(
-                          maxLines: null,
-                          autocorrect: false,
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.all(12),
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            hintText: "Type Message here",
-                            hintStyle: TextStyle(
-                              color: TColor.placeholder,
-                              fontSize: 15,
+          ),
+          Container(
+            color: TColor.secondary,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              20 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 4),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _subjectController,
+                    decoration: InputDecoration(
+                      hintText: "Subject",
+                      hintStyle: TextStyle(color: TColor.placeholder),
+                      border: InputBorder.none,
+                    ),
+                    style: TextStyle(color: TColor.primaryText, fontSize: 15),
+                  ),
+                  const Divider(height: 16),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            PopupLayout(
+                              bgColor: Colors.black12,
+                              child: ImagePickerScreen(
+                                didSelect: (selectPath) {
+                                  debugPrint(selectPath);
+                                },
+                              ),
                             ),
+                          );
+                        },
+                        child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: TColor.primary,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          maxLines: null,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: "Type your message...",
+                            hintStyle: TextStyle(color: TColor.placeholder),
                           ),
                           style: TextStyle(
                             color: TColor.primaryText,
@@ -264,21 +169,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
                           ),
                         ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: Image.asset(
-                        "assets/img/send.png",
-                        height: 35,
-                        width: 35,
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.send, color: Colors.black),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
