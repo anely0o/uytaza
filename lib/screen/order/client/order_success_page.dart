@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
+import 'package:uytaza/screen/main/main_tab_page.dart';
+
+import 'package:uytaza/screen/order/client/orders_screen.dart';
+import '../../models/order_model.dart';
 
 class OrderSuccessPage extends StatelessWidget {
   const OrderSuccessPage({super.key});
@@ -9,12 +13,12 @@ class OrderSuccessPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: TColor.primary,
       appBar: AppBar(
+        centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Success',
+          "Success",
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -26,7 +30,7 @@ class OrderSuccessPage extends StatelessWidget {
         children: [
           Expanded(
             child: Container(
-              width: double.infinity,
+              width: MediaQuery.of(context).size.width,
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -38,38 +42,43 @@ class OrderSuccessPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle_outline,
-                      color: Colors.green, size: 100),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green,
+                    size: 100,
+                  ),
                   const SizedBox(height: 30),
                   const Text(
-                    'Your order has been placed!',
-                    textAlign: TextAlign.center,
+                    "Your order has been placed!",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 50),
                   InkWell(
                     onTap: () {
-                      // ⬇️  переходим на главный экран и открываем вкладку Orders (index 2)
-                      Navigator.pushNamedAndRemoveUntil(
+                      Navigator.pushAndRemoveUntil(
                         context,
-                        '/main',
-                            (_) => false,
-                        arguments: 2,
+                        MaterialPageRoute(
+                          builder: (_) => MainTabPage(initialIndex: 2),
+                        ),
+                        (route) => false,
                       );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 60, vertical: 15),
+                        horizontal: 60,
+                        vertical: 15,
+                      ),
                       decoration: BoxDecoration(
-                        color: TColor.primary,
                         borderRadius: BorderRadius.circular(12),
+                        color: TColor.primary,
                       ),
                       child: const Text(
-                        'Go to Orders',
+                        "Go to Orders",
                         style: TextStyle(
                           fontSize: 18,
                           color: Colors.white,

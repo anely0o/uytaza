@@ -38,15 +38,15 @@ class RoundButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color:
-          type == RoundButtonType.primary
-              ? TColor.primary
-              : type == RoundButtonType.secondary
-              ? TColor.secondary
-              : Colors.transparent,
+              type == RoundButtonType.primary
+                  ? TColor.primary
+                  : type == RoundButtonType.secondary
+                  ? TColor.secondary
+                  : Colors.transparent,
           border:
-          type == RoundButtonType.line
-              ? Border.all(color: lineColor ?? TColor.secondary, width: 2)
-              : null,
+              type == RoundButtonType.line
+                  ? Border.all(color: lineColor ?? TColor.secondary, width: 2)
+                  : null,
           borderRadius: BorderRadius.circular(radius),
         ),
         height: height,
@@ -55,9 +55,9 @@ class RoundButton extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color:
-            type == RoundButtonType.line
-                ? (lineColor ?? TColor.primaryText)
-                : Colors.white,
+                type == RoundButtonType.line
+                    ? (lineColor ?? TColor.primaryText)
+                    : Colors.white,
             fontSize: fontSize,
             fontWeight: fontWeight,
           ),
