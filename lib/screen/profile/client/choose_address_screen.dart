@@ -4,6 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:uytaza/common/color_extension.dart';
+import 'package:uytaza/common/extension.dart';
+import 'package:uytaza/screen/order/client/rate_for_service_user_screen.dart';
 
 class ChooseAddressScreen extends StatefulWidget {
   const ChooseAddressScreen({super.key});
@@ -15,128 +17,190 @@ class ChooseAddressScreen extends StatefulWidget {
 class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
+
   LatLng? _selectedLocation;
   String? _selectedAddress;
 
   Future<void> _searchAddress() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
-    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1');
 
-    final response = await http.get(url, headers: {'User-Agent': 'Flutter UyTaza App'});
+    final url = Uri.parse(
+      'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1',
+    );
+
+    final response = await http.get(
+      url,
+      headers: {'User-Agent': 'Flutter UyTaza App'},
+    );
 
     if (response.statusCode == 200) {
       final List results = json.decode(response.body);
       if (results.isNotEmpty) {
         final lat = double.parse(results[0]['lat']);
         final lon = double.parse(results[0]['lon']);
+
         setState(() {
           _selectedLocation = LatLng(lat, lon);
           _selectedAddress = results[0]['display_name'];
         });
-        _mapController.move(_selectedLocation!, 15);
+
+        _mapController.move(_selectedLocation!, 16);
       } else {
-        _showMessage("Address not found");
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Address not found")));
       }
     }
   }
 
   void _saveLocation() {
-    if (_selectedAddress != null) {
-      Navigator.pop(context, _selectedAddress!);
+    if (_selectedLocation != null && _selectedAddress != null) {
+      Navigator.pop(context, {
+        'lat': _selectedLocation!.latitude,
+        'lon': _selectedLocation!.longitude,
+        'address': _selectedAddress!,
+      });
     }
-  }
-
-  void _showMessage(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.bg,
+      backgroundColor: const Color(0xffEFEFEF),
       appBar: AppBar(
-        title: const Text("Choose Address", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: TColor.primary,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: false,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RateForServiceUserScreen(),
+              ),
+            );
+          },
+          icon: Image.asset("assets/img/menu.png", width: 20, height: 20),
+        ),
+        title: Text(
+          "Choose your address",
+          style: TextStyle(
+            color: TColor.primaryText,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => context.pop(),
+            icon: Image.asset("assets/img/back.png"),
+          ),
+        ],
       ),
       body: Column(
         children: [
+          // Поисковая строка
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _searchController,
+                    style: TextStyle(color: TColor.primaryText),
                     decoration: InputDecoration(
-                      hintText: "Search your address",
+                      hintText: "Enter address",
+                      hintStyle: TextStyle(color: TColor.secondaryText),
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.search),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: TColor.secondary),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: _searchAddress,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: TColor.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Icon(Icons.arrow_forward, color: Colors.white),
+                  child: const Icon(Icons.search),
                 ),
               ],
             ),
           ),
+
+          // Карта
           Expanded(
-            child: FlutterMap(
-              mapController: _mapController,
-              options: const MapOptions(
-                initialCenter: LatLng(51.09078, 71.41813),
-                initialZoom: 12,
-              ),
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                TileLayer(
-                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  userAgentPackageName: "com.example.uytaza",
-                ),
-                if (_selectedLocation != null)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        width: 40,
-                        height: 40,
-                        point: _selectedLocation!,
-                        child: const Icon(Icons.location_pin, size: 40, color: Colors.red),
-                      ),
-                    ],
+                FlutterMap(
+                  mapController: _mapController,
+                  options: const MapOptions(
+                    initialCenter: LatLng(51.09078, 71.41813),
+                    initialZoom: 12,
                   ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      userAgentPackageName: "com.example.uytaza",
+                    ),
+                    if (_selectedLocation != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            width: 40,
+                            height: 40,
+                            point: _selectedLocation!,
+                            child: const Icon(
+                              Icons.location_pin,
+                              size: 40,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
+
+          // Отображение адреса и кнопка сохранения
           if (_selectedAddress != null)
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Column(
                 children: [
                   Text(
                     _selectedAddress!,
+                    style: TextStyle(color: TColor.primaryText, fontSize: 16),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: _saveLocation,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: TColor.primary,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text("Save Address", style: TextStyle(color: Colors.white)),
+                    child: const Text("Save Address"),
                   ),
                 ],
               ),

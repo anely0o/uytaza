@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/login/api_service.dart';
-import 'dart:convert';
-import 'choose_address_screen.dart';
+import 'package:uytaza/common_widget/round_button.dart';
+import 'package:uytaza/common_widget/round_textfield.dart';
+import 'package:uytaza/screen/order/client/rate_for_service_user_screen.dart';
+import 'package:uytaza/screen/profile/client/choose_address_screen.dart';
+import 'package:uytaza/screen/profile/client/subscription_screen.dart';
+
 import 'settings_screen.dart';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -13,141 +16,56 @@ class ClientProfileScreen extends StatefulWidget {
 }
 
 class _ClientProfileScreenState extends State<ClientProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
-  bool _loading = true;
-  String? _error;
+  //gamifications
+  final int _points = 250; // TODO: real user points from backend
+  late final int _level;
+  late final String _levelName;
+  late final double _progressToNext;
+  final List<String> _levelNames = [
+    'Dust Novice',
+    'Sparkling Specialist',
+    'Pristime Pro',
+    'Sterling Steward',
+    'Imaculate Master',
+  ];
 
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _dobController = TextEditingController();
-  final TextEditingController _roleController = TextEditingController();
+  final TextEditingController firstNameController = TextEditingController(
+    text: "John",
+  );
+  final TextEditingController lastNameController = TextEditingController(
+    text: "Doe",
+  );
 
-  String? _selectedGender;
-  final List<String> _genders = ['male', 'female', 'other'];
-
-  Map<String, dynamic> _initialData = {};
+  final TextEditingController addressController = TextEditingController(
+    text: "Choose your address",
+  );
+  final TextEditingController emailController = TextEditingController(
+    text: "examplee@gmail.com",
+  );
+  final TextEditingController phoneController = TextEditingController(
+    text: "87752704123",
+  );
+  final TextEditingController subscriptionController = TextEditingController(
+    text: "Choose your plan",
+  );
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _calculateGamification();
   }
 
-  Future<void> _loadProfile() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final res = await ApiService.getWithToken('/api/auth/profile');
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        setState(() {
-          _initialData = Map<String, dynamic>.from(data);
-          _emailController.text = data['Email'] ?? data['email'] ?? '';
-          _firstNameController.text = data['FirstName'] ?? data['first_name'] ?? '';
-          _lastNameController.text = data['LastName'] ?? data['last_name'] ?? '';
-          _phoneController.text = data['PhoneNumber'] ?? data['phone_number'] ?? '';
-          _addressController.text = data['Address'] ?? data['address'] ?? '';
-          _roleController.text = data['Role'] ?? data['role'] ?? 'Client';
-
-          String dob = data['DateOfBirth'] ?? data['date_of_birth'] ?? '';
-          if (dob.isNotEmpty) {
-            dob = dob.split('T')[0];
-            if (dob == '0001-01-01') dob = '';
-          }
-          _dobController.text = dob;
-
-          _selectedGender = data['Gender'] ?? data['gender'];
-          _loading = false;
-        });
-      } else {
-        setState(() => _error = 'Ошибка загрузки профиля: ${res.statusCode}');
-      }
-    } catch (e) {
-      setState(() => _error = 'Ошибка: $e');
-    }
-  }
-
-  Future<void> _updateProfile() async {
-    final updatedFields = <String, dynamic>{};
-
-    if (_firstNameController.text != (_initialData['FirstName'] ?? _initialData['first_name'] ?? '')) {
-      updatedFields['first_name'] = _firstNameController.text;
-    }
-    if (_lastNameController.text != (_initialData['LastName'] ?? _initialData['last_name'] ?? '')) {
-      updatedFields['last_name'] = _lastNameController.text;
-    }
-    if (_phoneController.text != (_initialData['PhoneNumber'] ?? _initialData['phone_number'] ?? '')) {
-      updatedFields['phone_number'] = _phoneController.text;
-    }
-    if (_addressController.text != (_initialData['Address'] ?? _initialData['address'] ?? '')) {
-      updatedFields['address'] = _addressController.text;
-    }
-
-    final oldDob = (_initialData['DateOfBirth'] ?? _initialData['date_of_birth'] ?? '').split('T')[0];
-    if (_dobController.text != oldDob) {
-      if (_dobController.text.isNotEmpty && !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(_dobController.text)) {
-        _showError('Неверный формат даты. Используйте ГГГГ-ММ-ДД');
-        return;
-      }
-      updatedFields['date_of_birth'] = _dobController.text.isNotEmpty
-          ? '${_dobController.text}T00:00:00Z'
-          : '';
-    }
-
-    if (_selectedGender != null && _selectedGender != (_initialData['Gender'] ?? _initialData['gender'] ?? '')) {
-      updatedFields['gender'] = _selectedGender;
-    }
-
-    if (updatedFields.isEmpty) {
-      _showError('Нет изменений для сохранения');
-      return;
-    }
-
-    try {
-      final response = await ApiService.putWithToken('/api/auth/profile', updatedFields);
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Профиль обновлён')),
-        );
-        await _loadProfile();
-      } else {
-        final data = json.decode(response.body);
-        _showError(data['error'] ?? 'Ошибка обновления');
-      }
-    } catch (e) {
-      _showError('Ошибка: $e');
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
+  void _calculateGamification() {
+    _level = (_points ~/ 100) + 1;
+    _levelName =
+        _level <= _levelNames.length
+            ? _levelNames[_level - 1]
+            : 'Imaculate Master';
+    _progressToNext = (_points % 100) / 100;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        backgroundColor: TColor.primary,
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
-      );
-    }
-
-    if (_error != null) {
-      return Scaffold(
-        backgroundColor: TColor.primary,
-        body: Center(
-          child: Text(_error!, style: const TextStyle(color: Colors.white)),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: TColor.primary,
       body: Column(
@@ -156,21 +74,60 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 30,
+                ),
                 children: [
-                  _buildReadonlyTile(Icons.email, 'Email', _emailController.text),
-                  _buildEditableField(
-                      Icons.person, 'First Name', _firstNameController),
-                  _buildEditableField(
-                      Icons.person_outline, 'Last Name', _lastNameController),
-                  _buildEditableField(
-                      Icons.phone, 'Phone Number', _phoneController),
-                  _buildAddressField(),
-                  _buildDateField(),
-                  _buildGenderField(),
+                  _buildInfoTile(
+                    icon: Icons.email,
+                    title: "Email",
+                    subtitle: emailController.text,
+                    editable: true,
+                    controller: emailController,
+                  ),
+                  _buildInfoTile(
+                    icon: Icons.phone,
+                    title: "Phone Number",
+                    subtitle: phoneController.text,
+                    editable: true,
+                    controller: phoneController,
+                    helper: "Mobile",
+                  ),
+                  _buildClickableTile(
+                    icon: Icons.group,
+                    title: "Subscription Plan",
+                    value: subscriptionController.text,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SubscriptionScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildClickableTile(
+                    icon: Icons.location_on,
+                    title: "Address",
+                    value: addressController.text,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChooseAddressScreen(),
+                        ),
+                      );
+                      // TODO: open address selector
+                    },
+                  ),
                 ],
               ),
             ),
@@ -181,8 +138,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildHeader() {
-    final fullName =
-    (_firstNameController.text + ' ' + _lastNameController.text).trim();
     return SafeArea(
       child: Column(
         children: [
@@ -191,175 +146,301 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             child: Row(
               children: [
                 const Expanded(
-                  child: Text('Details',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(
+                        "Details",
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
-                          fontWeight: FontWeight.bold)),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
-          const CircleAvatar(
+          GestureDetector(
+            onTap: _changeAvatarDialog,
+            child: CircleAvatar(
               radius: 40,
               backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 50, color: Colors.grey)),
-          const SizedBox(height: 12),
-          Text(fullName.isNotEmpty ? fullName : 'Not specified',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(_roleController.text,
-              style: const TextStyle(color: Colors.white70, fontSize: 16)),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReadonlyTile(IconData icon, String label, String value) {
-    final displayText = value.isNotEmpty ? value : "Нет данных";
-    return ListTile(
-      leading: Icon(icon, color: TColor.secondary),
-      title: Text(label,
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayText,
-          style: TextStyle(color: TColor.secondaryText)),
-    );
-  }
-
-  Widget _buildEditableField(
-      IconData icon, String label, TextEditingController controller) {
-    final displayText = controller.text.isNotEmpty ? controller.text : "Нет данных";
-    return ListTile(
-      leading: Icon(icon, color: TColor.secondary),
-      title: Text(label,
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayText,
-          style: TextStyle(color: TColor.secondaryText)),
-      trailing: IconButton(
-        icon: Icon(Icons.edit, color: TColor.primary),
-        onPressed: () => _editFieldDialog(label, controller),
-      ),
-    );
-  }
-
-  Widget _buildAddressField() {
-    final displayValue = _addressController.text.isNotEmpty ? _addressController.text : "Нет данных";
-    return ListTile(
-      leading: Icon(Icons.location_on, color: TColor.secondary),
-      title: Text('Address',
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayValue,
-          style: TextStyle(color: TColor.secondaryText)),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () async {
-        final res = await Navigator.push<String>(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const ChooseAddressScreen()));
-        if (res != null) {
-          setState(() => _addressController.text = res);
-          _updateProfile();
-        }
-      },
-    );
-  }
-
-  Widget _buildDateField() {
-    final displayValue = _dobController.text.isNotEmpty ? _dobController.text : "Нет данных";
-    return ListTile(
-      leading: Icon(Icons.cake, color: TColor.secondary),
-      title: Text('Date of Birth',
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayValue,
-          style: TextStyle(color: TColor.secondaryText)),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: _dobController.text.isNotEmpty
-              ? DateTime.parse(_dobController.text)
-              : DateTime.now(),
-          firstDate: DateTime(1900),
-          lastDate: DateTime.now(),
-        );
-        if (picked != null) {
-          final dateStr = picked.toIso8601String().split('T')[0];
-          setState(() => _dobController.text = dateStr);
-          _updateProfile();
-        }
-      },
-    );
-  }
-
-  Widget _buildGenderField() {
-    return ListTile(
-      leading: Icon(Icons.person_outline, color: TColor.secondary),
-      title: Text('Gender',
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      trailing: DropdownButton<String?>(
-        value: _selectedGender,
-        items: [
-          const DropdownMenuItem<String?>(
-            value: null,
-            child: Text("Не указано",
-                style: TextStyle(color: Colors.grey)),
+              child: const Icon(Icons.person, size: 50, color: Colors.grey),
+            ),
           ),
-          ..._genders.map((String value) {
-            return DropdownMenuItem<String?>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _editNameDialog,
+            child: Text(
+              "${firstNameController.text} ${lastNameController.text}",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "$_levelName (Lvl $_level)",
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: _progressToNext),
+              duration: const Duration(seconds: 1),
+              builder: (context, value, child) {
+                return LinearProgressIndicator(
+                  value: value,
+                  backgroundColor: Colors.white24,
+                  valueColor: AlwaysStoppedAnimation<Color>(TColor.secondary),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "${(_progressToNext * 100).toStringAsFixed(0)}% to next level",
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
         ],
-        onChanged: (newValue) {
-          setState(() {
-            _selectedGender = newValue;
-          });
-          _updateProfile();
-        },
       ),
+    );
+  }
+
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required TextEditingController controller,
+    String? helper,
+    bool editable = false,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: TColor.secondary),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: TColor.primaryText,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle:
+          helper != null
+              ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    helper,
+                    style: TextStyle(color: TColor.secondaryText, fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(color: TColor.secondaryText)),
+                ],
+              )
+              : Text(subtitle, style: TextStyle(color: TColor.secondaryText)),
+      trailing:
+          editable
+              ? IconButton(
+                onPressed: () => _editFieldDialog(title, controller),
+                icon: Icon(Icons.edit, color: TColor.primary),
+              )
+              : null,
+    );
+  }
+
+  Widget _buildClickableTile({
+    required IconData icon,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: TColor.secondary),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: TColor.primaryText,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      subtitle: Text(value, style: TextStyle(color: TColor.secondaryText)),
+    );
+  }
+
+  void _editNameDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Name"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: firstNameController,
+                decoration: const InputDecoration(labelText: "First Name"),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: lastNameController,
+                decoration: const InputDecoration(labelText: "Last Name"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {});
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _changeAvatarDialog() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Change Avatar",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text("Choose from Gallery"),
+                onTap: () {
+                  //todo implement gallery picker
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Take a photo"),
+                onTap: () {
+                  //todo implement camera capture
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   void _editFieldDialog(String label, TextEditingController controller) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit $label'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(hintText: 'Enter $label'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: Text("Edit $label"),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(hintText: "Enter $label"),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {});
+                  Navigator.pop(context);
+                },
+                child: const Text("Save"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              _updateProfile();
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
     );
   }
+
+  //void _editFieldBottomSheet(String label, TextEditingController controller) {
+  //showModalBottomSheet(
+  //context: context,
+  //isScrollControlled: true,
+  //shape: const RoundedRectangleBorder(
+  //borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+  //),
+  //builder: (context) {
+  //return Padding(
+  //padding: EdgeInsets.only(
+  //bottom: MediaQuery.of(context).viewInsets.bottom,
+  //top: 20,
+  //left: 20,
+  //right: 20,
+  //),
+  //child: Column(
+  //mainAxisSize: MainAxisSize.min,
+  //children: [
+  //Text(
+  //"Edit $label",
+  //style: const TextStyle(
+  //fontSize: 18,
+  //fontWeight: FontWeight.bold,
+  //),
+  //),
+  //const SizedBox(height: 12),
+  //TextField(
+  //controller: controller,
+  //decoration: InputDecoration(
+  //labelText: label,
+  //border: OutlineInputBorder(
+  //borderRadius: BorderRadius.circular(12),
+  //),
+  //),
+  //),
+  //const SizedBox(height: 16),
+  //ElevatedButton(
+  //onPressed: () {
+  //setState(() {});
+  //Navigator.pop(context);
+  //},
+  //style: ElevatedButton.styleFrom(
+  //backgroundColor: TColor.primary,
+  //shape: RoundedRectangleBorder(
+  //borderRadius: BorderRadius.circular(12),
+  //),
+  //),
+  //child: const Text("Save"),
+  //),
+  //const SizedBox(height: 20),
+  //],
+  //),
+  //);
+  //},
+  //);
+  //}
 }
