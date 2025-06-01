@@ -1,5 +1,3 @@
-// 📄 ChatMessageScreen.dart — Обновлённый стиль
-
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
@@ -14,138 +12,173 @@ class ChatMessageScreen extends StatefulWidget {
 }
 
 class _ChatMessageScreenState extends State<ChatMessageScreen> {
+  final TextEditingController _subjectController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.background,
+      backgroundColor: TColor.secondary,
       appBar: AppBar(
-        backgroundColor: TColor.card,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
+        backgroundColor: TColor.primary,
+        elevation: 0,
         title: Row(
           children: [
             const CircleAvatar(
               backgroundImage: AssetImage("assets/img/user_placeholder.png"),
-              radius: 20,
+              radius: 18,
             ),
             const SizedBox(width: 12),
-            Text("Adviser",
-                style: TextStyle(
-                    color: TColor.primaryText,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  "Asel Sadvakasova",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  "Manager",
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+              ],
+            ),
           ],
         ),
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
+            child: Container(
               padding: const EdgeInsets.all(16),
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                bool isSender = index % 2 == 0;
-                return Align(
-                  alignment: isSender
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    constraints:
-                    BoxConstraints(maxWidth: context.width * 0.7),
-                    decoration: BoxDecoration(
-                      color: isSender
-                          ? TColor.primary.withOpacity(0.85)
-                          : TColor.card,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft:
-                        Radius.circular(isSender ? 16 : 0),
-                        bottomRight:
-                        Radius.circular(isSender ? 0 : 16),
+              child: ListView.separated(
+                padding: const EdgeInsets.only(bottom: 12),
+                itemCount: 2,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  bool isSender = index % 2 == 0;
+                  return Align(
+                    alignment:
+                        isSender ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
-                      boxShadow: TColor.softShadow,
-                    ),
-                    child: Text(
-                      isSender ? "Thank you for contacting us!" : "Hello!",
-                      style: TextStyle(
-                        color: isSender ? Colors.white : TColor.primaryText,
-                        fontSize: 15,
+                      constraints: BoxConstraints(
+                        maxWidth: context.width * 0.7,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isSender ? TColor.chatTextBG : TColor.chatTextBG2,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        isSender
+                            ? "Hello! "
+                            : "Hello! \u{1F44B}\nThank you for reaching out to our cleaning service. We’re here to help.",
+                        style: TextStyle(
+                          color: isSender ? Colors.white : TColor.primaryText,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      PopupLayout(
-                        bgColor: Colors.black12,
-                        child: ImagePickerScreen(
-                          didSelect: (selectPath) {
-                            debugPrint(selectPath);
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(
-                      color: TColor.primary,
-                      borderRadius: BorderRadius.circular(24),
+          Container(
+            color: TColor.secondary,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              20 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 4),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _subjectController,
+                    decoration: InputDecoration(
+                      hintText: "Subject",
+                      hintStyle: TextStyle(color: TColor.placeholder),
+                      border: InputBorder.none,
                     ),
-                    child: const Icon(Icons.camera_alt_rounded,
-                        color: Colors.white),
+                    style: TextStyle(color: TColor.primaryText, fontSize: 15),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: TColor.border),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: "Type your message",
-                              hintStyle: TextStyle(
-                                  color: TColor.placeholder, fontSize: 14),
-                              border: InputBorder.none,
+                  const Divider(height: 16),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            PopupLayout(
+                              bgColor: Colors.black12,
+                              child: ImagePickerScreen(
+                                didSelect: (selectPath) {
+                                  debugPrint(selectPath);
+                                },
+                              ),
                             ),
+                          );
+                        },
+                        child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: TColor.primary,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.send_rounded,
-                              color: TColor.primary),
-                          onPressed: () {},
-                        )
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          maxLines: null,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: "Type your message...",
+                            hintStyle: TextStyle(color: TColor.placeholder),
+                          ),
+                          style: TextStyle(
+                            color: TColor.primaryText,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.send, color: Colors.black),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          )
+          ),
         ],
       ),
     );

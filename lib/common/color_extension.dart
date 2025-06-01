@@ -17,7 +17,8 @@ class TColor {
 
   static Color get success => const Color(0xFF81C784);       // зелёный
   static Color get error => const Color(0xFFE57373);         // красный
-
+  static Color get chatTextBG => const Color(0xff115173);
+  static Color get chatTextBG2 => const Color(0xffF4F6FF);
   static Color get border => const Color(0xFF607D8B);
   static List<BoxShadow> get softShadow => [
     const BoxShadow(
