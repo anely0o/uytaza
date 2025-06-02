@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
+import 'package:uytaza/api/api_service.dart';
 
 class RateOfServiceScreen extends StatefulWidget {
   const RateOfServiceScreen({super.key});
@@ -11,17 +13,65 @@ class RateOfServiceScreen extends StatefulWidget {
 }
 
 class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
+  double rating = 0;
+  int totalJobs = 0;
+  double yearsExperience = 0;
+  List<dynamic> reviews = [];
+  String name = '';
+  String phone = '';
+  String email = '';
+
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final profileRes = await ApiService.getWithToken('/api/auth/profile');
+      final ratingRes = await ApiService.getWithToken('/rating');
+      final reviewRes = await ApiService.getWithToken('/reviews/me');
+
+      if (profileRes.statusCode == 200) {
+        final data = jsonDecode(profileRes.body);
+        name = '${data["FirstName"] ?? data["first_name"] ?? ''} ${data["LastName"] ?? data["last_name"] ?? ''}'.trim();
+        phone = data["PhoneNumber"] ?? data["phone_number"] ?? '';
+        email = data["Email"] ?? data["email"] ?? '';
+        totalJobs = data["JobsDone"] ?? 0;
+        yearsExperience = (data["ExperienceYears"] ?? 0).toDouble();
+      }
+
+      if (ratingRes.statusCode == 200) {
+        final data = jsonDecode(ratingRes.body);
+        rating = (data["rating"] ?? 0).toDouble();
+      }
+
+      if (reviewRes.statusCode == 200) {
+        reviews = jsonDecode(reviewRes.body);
+      }
+    } catch (e) {
+      print("Error loading profile/rating/reviews: $e");
+    }
+
+    setState(() => _loading = false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: TColor.primary,
         elevation: 0,
-        leading: IconButton(
-          onPressed: () {},
-          icon: Image.asset("assets/img/menu.png"),
-        ),
         centerTitle: false,
         title: Text(
           "Rate for Service",
@@ -31,345 +81,150 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: Image.asset("assets/img/back.png"),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Stack(
-              alignment: Alignment.topCenter,
-              children: [
-                Container(
-                  width: double.maxFinite,
-                  height: context.width * 0.5,
-                  decoration: BoxDecoration(
-                    color: TColor.primary,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 2,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: context.width * 0.14),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 35),
-                    width: double.maxFinite,
-                    height: context.width * 0.55,
-                    decoration: BoxDecoration(
-                      color: Colors.white30,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: context.width * 0.17),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 25),
-                    width: double.maxFinite,
-                    height: context.width * 0.55,
-                    decoration: BoxDecoration(
-                      color: Colors.white54,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: context.width * 0.2),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 15),
-                    width: double.maxFinite,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 2,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(height: context.width * 0.22),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.star, color: TColor.primary, size: 25),
-                            const SizedBox(width: 8),
-                            Text(
-                              "4.2",
-                              style: TextStyle(
-                                color: TColor.secondaryText,
-                                fontSize: 17,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          "Andrew, Smelyanski",
-                          style: TextStyle(
-                            color: TColor.primaryText,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 15),
-                        const Divider(color: Colors.black12, height: 1),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "3250",
-                                    style: TextStyle(
-                                      color: TColor.primaryText,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Total Jobs",
-                                    style: TextStyle(
-                                      color: TColor.secondaryText,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              color: Colors.black12,
-                              width: 1,
-                              height: 60,
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "2.5",
-                                    style: TextStyle(
-                                      color: TColor.primaryText,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Years",
-                                    style: TextStyle(
-                                      color: TColor.secondaryText,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: context.width * 0.08),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white30,
-                      borderRadius: BorderRadius.circular(context.width * 0.3),
-                      border: Border.all(color: Colors.white, width: 1),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 2,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(context.width * 0.3),
-                      child: Image.asset(
-                        "assets/img/u2.png",
-                        width: context.width * 0.3,
-                        height: context.width * 0.3,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "PERSONAL INFO",
-                    style: TextStyle(
-                      color: TColor.primaryText,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 60,
-                      top: 15,
-                      bottom: 15,
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          "+7 775 270 41 35",
-                          style: TextStyle(
-                            color: TColor.secondaryText,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(color: Colors.black12, height: 1),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 60,
-                      top: 15,
-                      bottom: 15,
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          "toxis.slimey@gmail.com",
-                          style: TextStyle(
-                            color: TColor.secondaryText,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(color: Colors.black12, height: 1),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 60,
-                      top: 15,
-                      bottom: 15,
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          "Russian and Kazakh",
-                          style: TextStyle(
-                            color: TColor.secondaryText,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(color: Colors.black12, height: 1),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 60,
-                      top: 15,
-                      bottom: 15,
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          "Astana, Kazakhstan",
-                          style: TextStyle(
-                            color: TColor.secondaryText,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Reviews",
-                    style: TextStyle(
-                      color: TColor.primaryText,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 15),
-                    child: Row(
-                      children: [
-                        Image.asset(
-                          "assets/img/u1.png",
-                          width: 25,
-                          height: 25,
-                          fit: BoxFit.cover,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "SIVAG",
-                          style: TextStyle(
-                            color: TColor.primaryText,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-                        RatingBar.builder(
-                          initialRating: 3,
-                          minRating: 1,
-                          direction: Axis.horizontal,
-                          allowHalfRating: true,
-                          itemCount: 5,
-                          itemSize: 20,
-                          unratedColor: Colors.black12,
-                          itemPadding: const EdgeInsets.symmetric(
-                            horizontal: 2.0,
-                          ),
-                          itemBuilder:
-                              (context, _) =>
-                                  const Icon(Icons.star, color: Colors.amber),
-                          onRatingUpdate: (rating) {
-                            print(rating);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Text(
-                      "Service good,",
-                      style: TextStyle(
-                        color: TColor.secondaryText,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(context),
+            _buildPersonalInfo(),
+            _buildReviews(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Container(height: context.width * 0.5, color: TColor.primary),
+        Padding(
+          padding: EdgeInsets.only(top: context.width * 0.2),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 15),
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Column(
+              children: [
+                SizedBox(height: context.width * 0.15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.star, color: TColor.primary, size: 25),
+                    const SizedBox(width: 8),
+                    Text(rating.toStringAsFixed(1),
+                        style: TextStyle(color: TColor.secondaryText, fontSize: 17)),
+                  ],
+                ),
+                Text(name,
+                    style: TextStyle(
+                        color: TColor.primaryText,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 15),
+                const Divider(height: 1),
+                Row(
+                  children: [
+                    _buildStatItem(totalJobs.toString(), "Total Jobs"),
+                    Container(width: 1, height: 60, color: Colors.black12),
+                    _buildStatItem(yearsExperience.toStringAsFixed(1), "Years"),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: context.width * 0.08,
+          child: CircleAvatar(
+            radius: context.width * 0.15,
+            backgroundColor: Colors.white,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(context.width * 0.15),
+              child: Image.asset("assets/img/u2.png", fit: BoxFit.cover),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String value, String label) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: TextStyle(
+                  color: TColor.primaryText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(color: TColor.secondaryText, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalInfo() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _infoBlock("Phone", phone),
+          _infoBlock("Email", email),
+          const Divider(),
+          Text(
+            "Reviews",
+            style: TextStyle(
+                color: TColor.primaryText, fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoBlock(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text("$title: $value",
+          style: TextStyle(color: TColor.secondaryText, fontSize: 15)),
+    );
+  }
+
+  Widget _buildReviews() {
+    return Column(
+      children: reviews.map((r) {
+        final name = r['reviewer_name'] ?? 'Anonymous';
+        final comment = r['comment'] ?? '';
+        final stars = (r['rating'] ?? 0).toDouble();
+
+        return ListTile(
+          leading: const CircleAvatar(child: Icon(Icons.person)),
+          title: Text(name, style: TextStyle(color: TColor.primaryText)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RatingBarIndicator(
+                rating: stars,
+                itemBuilder: (context, _) =>
+                const Icon(Icons.star, color: Colors.amber),
+                itemCount: 5,
+                itemSize: 20.0,
+                unratedColor: Colors.black12,
+              ),
+              const SizedBox(height: 4),
+              Text(comment, style: TextStyle(color: TColor.secondaryText)),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/models/order_model.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 import 'order_build_page.dart';
+import 'order_edit_page.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -235,16 +236,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             children: [
                               TextButton(
                                 onPressed: () async {
-                                  final result = await Navigator.push(
+                                  final updated = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => OrderBuildPage(),
+                                      builder: (_) => OrderEditPage(orderId: order.id),
                                     ),
                                   );
-                                  if (result is Order) _fetchOrders();
+                                  if (updated == true) _fetchOrders();
                                 },
                                 child: const Text("Edit"),
                               ),
+
                               TextButton(
                                 onPressed: () async {
                                   final confirmed = await showDialog<bool>(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 import 'dart:convert';
 import 'choose_address_screen.dart';
 import 'settings_screen.dart';
@@ -61,7 +61,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           }
           _dobController.text = dob;
 
-          _selectedGender = data['Gender'] ?? data['gender'];
+          String? gender = data['Gender'] ?? data['gender'];
+          if (!_genders.contains(gender)) {
+            gender = null;
+          }
+          _selectedGender = gender;
+
           _loading = false;
         });
       } else {
@@ -94,9 +99,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
         _showError('Неверный формат даты. Используйте ГГГГ-ММ-ДД');
         return;
       }
-      updatedFields['date_of_birth'] = _dobController.text.isNotEmpty
-          ? '${_dobController.text}T00:00:00Z'
-          : '';
+      if (_dobController.text.isNotEmpty) {
+        updatedFields['date_of_birth'] = '${_dobController.text}T00:00:00Z';
+      }
+
     }
 
     if (_selectedGender != null && _selectedGender != (_initialData['Gender'] ?? _initialData['gender'] ?? '')) {

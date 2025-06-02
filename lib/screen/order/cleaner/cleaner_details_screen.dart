@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   final String orderId;
@@ -31,8 +31,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
   Future<void> _loadOrder() async {
     try {
-      final res =
-      await ApiService.getWithToken('${ApiRoutes.cleanerOrders}/${widget.orderId}');
+      final res = await ApiService.getWithToken('${ApiRoutes.cleanerOrders}/${widget.orderId}');
       if (res.statusCode == 200) {
         _order = jsonDecode(res.body);
       } else {
@@ -64,21 +63,23 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         file: _pickedImage!,
       );
       if (res.statusCode == 200) {
-        if (mounted) Navigator.pop(context, true); // сообщаем родителю
+        await _loadOrder();
+        _pickedImage = null;
+        _show('✅ Order marked as finished');
       } else {
         throw 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _show('Failed: $e');
+      _show('❌ Failed: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  //--------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
+    final isFinished = _order?['status'] == 'finished';
+
     return Scaffold(
       backgroundColor: TColor.background,
       appBar: AppBar(
@@ -94,7 +95,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           : _error != null
           ? Center(child: Text(_error!))
           : _orderContent(),
-      floatingActionButton: _pickedImage != null
+      floatingActionButton: !isFinished && _pickedImage != null
           ? FloatingActionButton.extended(
         onPressed: _finish,
         backgroundColor: TColor.primary,
@@ -106,7 +107,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }
 
   Widget _orderContent() {
-    final addr   = _order?['address'] ?? '';
+    final addr = _order?['address'] ?? '';
     final status = _order?['status'] ?? '';
     final extras = List<String>.from(_order?['extras'] ?? []);
     final startIso = _order?['start_time'] ?? _order?['scheduled_at'];
@@ -115,35 +116,38 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ? DateFormat('dd MMM yyyy, HH:mm').format(start.toLocal())
         : '';
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        _infoRow('Address', addr),
-        const SizedBox(height: 8),
-        _infoRow('Start', startFmt),
-        const SizedBox(height: 8),
-        _infoRow('Status', status),
-        const SizedBox(height: 18),
-        Text('Extras',
-            style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: TColor.primaryText)),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          children: extras
-              .map((e) => Chip(
-            label: Text(e),
-            backgroundColor: TColor.primary.withOpacity(.1),
-            labelStyle:
-            TextStyle(color: TColor.primaryText, fontSize: 12),
-          ))
-              .toList(),
-        ),
-        const SizedBox(height: 24),
-        _pickedImage == null ? _uploadPlaceholder() : _imagePreview(),
-      ],
+    return RefreshIndicator(
+      onRefresh: _loadOrder,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          _infoRow('Address', addr),
+          const SizedBox(height: 8),
+          _infoRow('Start', startFmt),
+          const SizedBox(height: 8),
+          _infoRow('Status', status),
+          const SizedBox(height: 18),
+          Text('Extras',
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: TColor.primaryText)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: extras
+                .map((e) => Chip(
+              label: Text(e),
+              backgroundColor: TColor.primary.withOpacity(.1),
+              labelStyle:
+              TextStyle(color: TColor.primaryText, fontSize: 12),
+            ))
+                .toList(),
+          ),
+          const SizedBox(height: 24),
+          _pickedImage == null ? _uploadPlaceholder() : _imagePreview(),
+        ],
+      ),
     );
   }
 
@@ -183,8 +187,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       ),
     ),
   ]);
-
-  //--------------------------------------------------
 
   Widget _infoRow(String k, String v) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
+import 'package:uytaza/screen/login/sign_in_screen.dart';
+import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/screen/profile/about_us_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -12,6 +14,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
+
   void _toggleNotifications(bool value) {
     setState(() {
       _notificationsEnabled = value;
@@ -26,8 +29,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _logout() {
-    //logout logic
+  void _logout() async {
+    try {
+      final response = await ApiService.postWithToken('/api/auth/logout', {});
+      if (response.statusCode == 200) {
+        await ApiService.logout(); // удалить локальный токен
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const SignInScreen()),
+                (route) => false,
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to log out. Try again.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred during logout.')),
+      );
+    }
   }
 
   @override

@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/screen/models/cleaning_service.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/screen/profile/profile_api.dart';
 import 'package:uytaza/screen/profile/client/choose_address_screen.dart';
 

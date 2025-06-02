@@ -41,9 +41,9 @@ class MyApp extends StatelessWidget {
           final sub = ModalRoute.of(ctx)!.settings.arguments as Subscription;
           return SubscriptionEditPage(subscription: sub);
         },
-        '/order/edit'  : (ctx) {
-          final ord = ModalRoute.of(ctx)!.settings.arguments as Order;
-          return OrderEditPage(order: ord);
+        '/order/edit': (ctx) {
+          final orderId = ModalRoute.of(ctx)!.settings.arguments as String;
+          return OrderEditPage(orderId: orderId);
         },
       },
 

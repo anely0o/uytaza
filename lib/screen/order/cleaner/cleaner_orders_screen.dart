@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/login/api_service.dart';
-
+import 'package:uytaza/api/api_service.dart';
 
 import 'cleaner_details_screen.dart';
 
@@ -44,8 +43,6 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
 
   Future<void> _refresh() => _fetchOrders();
 
-  //--------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,17 +71,18 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
     );
   }
 
-  //--------------------------------------------------------
-
   Widget _orderCard(Map<String, dynamic> order) {
-    final id        = order['id'].toString();
-    final address   = order['address'] ?? '';
-    final status    = order['status'] ?? '';
-    final startIso  = order['start_time'] ?? order['scheduled_at'];
+    final id = order['id'].toString();
+    final address = order['address'] ?? '';
+    final status = order['status'] ?? '';
+    final startIso = order['start_time'] ?? order['scheduled_at'];
     final startTime = DateTime.tryParse(startIso ?? '');
-    final fmtTime   = startTime != null
+    final fmtTime = startTime != null
         ? DateFormat('dd MMM yyyy, HH:mm').format(startTime.toLocal())
         : '';
+    final client = order['client'] ?? {};
+    final clientName = (client['first_name'] ?? '') + ' ' + (client['last_name'] ?? '');
+    final rating = client['rating']?.toDouble() ?? 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -94,23 +92,24 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         boxShadow: TColor.softShadow,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(address,
+        Text(clientName,
             style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: TColor.primaryText)),
+                fontSize: 16, fontWeight: FontWeight.bold, color: TColor.primaryText)),
+        const SizedBox(height: 4),
+        Row(children: _buildStars(rating)),
+        const SizedBox(height: 6),
+        Text(address,
+            style: TextStyle(fontSize: 15, color: TColor.primaryText)),
         const SizedBox(height: 6),
         Text('Start: $fmtTime',
             style: TextStyle(color: TColor.secondaryText, fontSize: 14)),
         const SizedBox(height: 6),
         Chip(
-          backgroundColor: status == 'finished'
-              ? Colors.green[100]
-              : Colors.orange[100],
+          backgroundColor:
+          status == 'finished' ? Colors.green[100] : Colors.orange[100],
           label: Text(status,
               style: TextStyle(
-                  color:
-                  status == 'finished' ? Colors.green : Colors.orange)),
+                  color: status == 'finished' ? Colors.green : Colors.orange)),
         ),
         const SizedBox(height: 12),
         Align(
@@ -129,5 +128,20 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         )
       ]),
     );
+  }
+
+  List<Widget> _buildStars(double rating) {
+    const total = 5;
+    int full = rating.floor();
+    bool hasHalf = (rating - full) >= 0.5;
+    List<Widget> stars = [];
+    for (int i = 0; i < full; i++) {
+      stars.add(const Icon(Icons.star, color: Colors.amber, size: 18));
+    }
+    if (hasHalf) stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 18));
+    while (stars.length < total) {
+      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 18));
+    }
+    return stars;
   }
 }

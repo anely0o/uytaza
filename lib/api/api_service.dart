@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../profile/user_config.dart';
+import '../screen/profile/user_config.dart';
 
 class ApiService {
   static const String baseUrl = "http://10.0.2.2:8080";
@@ -199,5 +199,25 @@ class ApiService {
     final streamed = await req.send();
     return http.Response.fromStream(streamed);
   }
+  static Future<http.MultipartRequest> multipartPost(String endpoint) async {
+    final token = await getToken();
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final request = http.MultipartRequest('POST', uri);
+    request.headers['Authorization'] = 'Bearer $token';
+    return request;
+  }
+
+  static Future<http.MultipartFile> filePart(File file, String field) async {
+    return await http.MultipartFile.fromPath(field, file.path);
+  }
+  static dynamic decodeJson(http.Response response) {
+    try {
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      print('JSON decode error: $e');
+      return null;
+    }
+  }
+
 
 }

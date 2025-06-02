@@ -8,7 +8,7 @@ import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
 import 'package:uytaza/screen/login/sign_up_screen.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
-import 'api_service.dart';
+import '../../api/api_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});

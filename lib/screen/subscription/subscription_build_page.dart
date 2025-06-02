@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_routes.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/screen/models/order_model.dart';
 
 class SubscriptionBuildPage extends StatefulWidget {

@@ -7,7 +7,7 @@ import 'package:uytaza/screen/login/sign_in_screen.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
 
 import '../home/home_screen.dart';
-import 'api_service.dart';
+import '../../api/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

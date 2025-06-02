@@ -1,10 +1,9 @@
 // profile_router_screen.dart
 import 'package:flutter/material.dart';
 import 'package:uytaza/screen/profile/user_config.dart';
-import 'package:uytaza/screen/profile/admin_profile_screen.dart';
 import 'package:uytaza/screen/profile/client/client_profile_screen.dart';
 import 'package:uytaza/screen/profile/cleaner/cleaner_profile_screen.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 
 class ProfileRouterScreen extends StatefulWidget {
   const ProfileRouterScreen({super.key});
@@ -64,8 +63,6 @@ class _ProfileRouterScreenState extends State<ProfileRouterScreen> {
     }
 
     switch (_userRole!) {
-      case UserRole.admin:
-        return const AdminProfileScreen();
       case UserRole.client:
         return const ClientProfileScreen();
       case UserRole.cleaner:

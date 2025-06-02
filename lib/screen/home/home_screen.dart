@@ -7,7 +7,7 @@ import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/screen/home/subscription_cell.dart';
 import 'package:uytaza/screen/order/client/order_build_page.dart';
 import 'package:uytaza/screen/profile/about_us_screen.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 
 // ▼ добавьте
 import 'package:uytaza/screen/subscription/subscription_build_page.dart';

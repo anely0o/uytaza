@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/login/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/screen/models/subscription_model.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
@@ -31,6 +31,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         final subs = (jsonDecode(r.body) as List)
             .map((e) => Subscription.fromJson(e))
             .toList();
+
+        subs.sort((a, b) {
+          if (a.status == 'cancelled' && b.status != 'cancelled') return 1;
+          if (a.status != 'cancelled' && b.status == 'cancelled') return -1;
+          return 0;
+        });
+
         if (mounted) {
           setState(() {
             _subs = subs;
@@ -72,15 +79,33 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         itemBuilder: (_, i) {
           final s = _subs[i];
           final fmt = DateFormat('dd.MM.yy');
+
+          final isCancelled = s.status.toLowerCase() == 'cancelled';
+          final textStyle = TextStyle(
+            color: isCancelled ? TColor.secondaryText.withOpacity(0.5) : TColor.primaryText,
+            fontWeight: isCancelled ? FontWeight.normal : FontWeight.w600,
+          );
+
           return ListTile(
+            tileColor: isCancelled ? Colors.grey.shade100 : null,
             title: Text(
-                'Order ${s.orderId.substring(0, 6)}…  •  ${s.status}'),
+              'Order ${s.orderId.substring(0, 6)}…  •  ${s.status}',
+              style: textStyle,
+            ),
             subtitle: Text(
-                '${fmt.format(s.start)} → ${fmt.format(s.end)}'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.pushNamed(
-                context, '/subs/edit',
-                arguments: s).then((_) => _load()),
+              '${fmt.format(s.start)} → ${fmt.format(s.end)}',
+              style: textStyle.copyWith(fontSize: 13),
+            ),
+            trailing: Icon(
+              Icons.chevron_right,
+              color: isCancelled ? Colors.grey : TColor.primaryText,
+            ),
+            onTap: () {
+              if (!isCancelled) {
+                Navigator.pushNamed(context, '/subs/edit', arguments: s)
+                    .then((_) => _load());
+              }
+            },
           );
         },
       ),
