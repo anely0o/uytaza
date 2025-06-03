@@ -5,8 +5,8 @@ import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
-import 'package:uytaza/screen/home/home_screen.dart';
-import '../main/main_tab_page.dart';
+import 'package:uytaza/screen/login/sign_in_screen.dart';
+import '../home/home_screen.dart';
 import '../../api/api_service.dart';
 
 class TemporaryPasswordChangeScreen extends StatefulWidget {
@@ -52,7 +52,7 @@ class _TemporaryPasswordChangeScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Password changed successfully")),
         );
-        context.push(MainTabPage());
+        context.push(const HomeScreen());
       } else {
         final error = jsonDecode(response.body)['error'];
         ScaffoldMessenger.of(
@@ -69,11 +69,12 @@ class _TemporaryPasswordChangeScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: TColor.background,
       body: Stack(
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: Image.asset("assets/img/bg.png", fit: BoxFit.cover),
+            child: Container(color: TColor.background),
           ),
           SizedBox(
             width: context.width,
@@ -94,7 +95,7 @@ class _TemporaryPasswordChangeScreenState
                       vertical: 45,
                       horizontal: 25,
                     ),
-                    width: double.maxFinite,
+                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 45,
                       vertical: 25,
@@ -102,13 +103,7 @@ class _TemporaryPasswordChangeScreenState
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(25),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 3,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                      boxShadow: TColor.softShadow,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -116,7 +111,7 @@ class _TemporaryPasswordChangeScreenState
                         Text(
                           "Change Temporary Password",
                           style: TextStyle(
-                            color: TColor.primaryText,
+                            color: TColor.textPrimary,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                           ),
@@ -136,6 +131,8 @@ class _TemporaryPasswordChangeScreenState
                         const SizedBox(height: 20),
                         RoundButton(
                           title: "CHANGE PASSWORD",
+                          backgroundColor: TColor.primary,
+                          textColor: Colors.white,
                           fontWeight: FontWeight.bold,
                           onPressed: _changePassword,
                         ),
@@ -147,6 +144,8 @@ class _TemporaryPasswordChangeScreenState
                     title: "BACK TO SIGN IN",
                     width: context.width * 0.65,
                     type: RoundButtonType.line,
+                    textColor: TColor.primary,
+                    lineColor: TColor.primary,
                     onPressed: () {
                       context.pop();
                     },

@@ -1,10 +1,12 @@
+// lib/screen/subscription/subscriptions_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:uytaza/api/api_routes.dart';
-import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
+import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/models/subscription_model.dart';
+import 'subscription_build_page.dart';
+import 'subscription_edit_page.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -16,32 +18,31 @@ class SubscriptionsScreen extends StatefulWidget {
 class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   bool _loading = true;
   String? _error;
-  var _subs = <Subscription>[];
+  List<Subscription> _allSubs = [];
+
+  // Фильтры
+  String _statusFilter = 'all'; // 'all' или 'active'
+  DateTime? _dateFilter;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadSubscriptions();
   }
 
-  Future<void> _load() async {
+  Future<void> _loadSubscriptions() async {
+    setState(() => _loading = true);
     try {
       final r = await ApiService.getWithToken('/api/subscriptions/my');
       if (r.statusCode == 200) {
         final subs = (jsonDecode(r.body) as List)
             .map((e) => Subscription.fromJson(e))
             .toList();
-
-        subs.sort((a, b) {
-          if (a.status == 'cancelled' && b.status != 'cancelled') return 1;
-          if (a.status != 'cancelled' && b.status == 'cancelled') return -1;
-          return 0;
-        });
-
         if (mounted) {
           setState(() {
-            _subs = subs;
+            _allSubs = subs;
             _error = null;
+            _loading = false;
           });
         }
       } else {
@@ -50,64 +51,208 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = '$e';
+          _error = e.toString();
+          _loading = false;
         });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
       }
     }
   }
 
+  /// Отображаем только «активные» (не cancelled) подписки
+  List<Subscription> get _filteredSubs {
+    final activeOnly = _allSubs.where((s) {
+      return s.status.toLowerCase() != 'cancelled';
+    }).toList();
+
+    return activeOnly.where((s) {
+      final matchesStatus = (_statusFilter == 'all') ||
+          (s.status.toLowerCase() != 'cancelled' && _statusFilter == 'active');
+      final matchesDate = _dateFilter == null ||
+          DateFormat('yyyy-MM-dd').format(s.start) ==
+              DateFormat('yyyy-MM-dd').format(_dateFilter!);
+      return matchesStatus && matchesDate;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final filteredSubs = _filteredSubs;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('My Subscriptions'),
-          backgroundColor: TColor.primary),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
-          : _subs.isEmpty
-          ? const Center(child: Text('No subscriptions'))
-          : ListView.separated(
-        padding: const EdgeInsets.all(12),
-        itemCount: _subs.length,
-        separatorBuilder: (_, __) => const Divider(),
-        itemBuilder: (_, i) {
-          final s = _subs[i];
-          final fmt = DateFormat('dd.MM.yy');
+      backgroundColor: TColor.background,
 
-          final isCancelled = s.status.toLowerCase() == 'cancelled';
-          final textStyle = TextStyle(
-            color: isCancelled ? TColor.secondaryText.withOpacity(0.5) : TColor.primaryText,
-            fontWeight: isCancelled ? FontWeight.normal : FontWeight.w600,
-          );
+      // AppBar без “Добавить”, FAB снизу
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: Text(
+          'My Subscriptions',
+          style: TextStyle(
+            color: TColor.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        iconTheme: IconThemeData(color: TColor.primary),
+      ),
 
-          return ListTile(
-            tileColor: isCancelled ? Colors.grey.shade100 : null,
-            title: Text(
-              'Order ${s.orderId.substring(0, 6)}…  •  ${s.status}',
-              style: textStyle,
-            ),
-            subtitle: Text(
-              '${fmt.format(s.start)} → ${fmt.format(s.end)}',
-              style: textStyle.copyWith(fontSize: 13),
-            ),
-            trailing: Icon(
-              Icons.chevron_right,
-              color: isCancelled ? Colors.grey : TColor.primaryText,
-            ),
-            onTap: () {
-              if (!isCancelled) {
-                Navigator.pushNamed(context, '/subs/edit', arguments: s)
-                    .then((_) => _load());
-              }
-            },
+      // FAB для создания новой подписки
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: TColor.primary,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SubscriptionBuildPage()),
           );
+          if (result == true) {
+            _loadSubscriptions();
+          }
         },
+      ),
+
+      body: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(40),
+            topRight: Radius.circular(40),
+          ),
+        ),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : (_error != null
+            ? Center(
+          child: Text(
+            _error!,
+            style: TextStyle(color: TColor.textSecondary),
+          ),
+        )
+            : Column(
+          children: [
+            // Строка фильтров: статус + дата
+            Row(
+              children: [
+                DropdownButton<String>(
+                  value: _statusFilter,
+                  items: [
+                    const DropdownMenuItem(
+                      value: 'all',
+                      child: Text('All'),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'active',
+                      child: Text('Active'),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _statusFilter = val);
+                    }
+                  },
+                ),
+                const SizedBox(width: 16),
+                TextButton.icon(
+                  icon: Icon(Icons.date_range, color: TColor.primary),
+                  label: Text(
+                    _dateFilter == null
+                        ? "Pick date"
+                        : DateFormat('yyyy-MM-dd')
+                        .format(_dateFilter!),
+                    style: TextStyle(color: TColor.primary),
+                  ),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() => _dateFilter = picked);
+                    }
+                  },
+                ),
+                if (_dateFilter != null)
+                  IconButton(
+                    icon: Icon(Icons.clear, color: TColor.primary),
+                    onPressed: () => setState(() => _dateFilter = null),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Список активных подписок
+            Expanded(
+              child: filteredSubs.isEmpty
+                  ? Center(
+                child: Text(
+                  'No active subscriptions.',
+                  style: TextStyle(
+                      fontSize: 16,
+                      color: TColor.textSecondary),
+                ),
+              )
+                  : ListView.builder(
+                itemCount: filteredSubs.length,
+                itemBuilder: (_, i) {
+                  final s = filteredSubs[i];
+                  final fmt = DateFormat('dd MMM yyyy');
+                  final isCancelled =
+                      s.status.toLowerCase() == 'cancelled';
+
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    margin:
+                    const EdgeInsets.symmetric(vertical: 8),
+                    elevation: 4,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      title: Text(
+                        'Order ${s.orderId.substring(0, 6)}…  •  ${s.status[0].toUpperCase()}${s.status.substring(1)}',
+                        style: TextStyle(
+                          color: isCancelled
+                              ? TColor.textSecondary
+                              .withOpacity(0.7)
+                              : TColor.textPrimary,
+                          fontWeight: isCancelled
+                              ? FontWeight.normal
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${fmt.format(s.start)} → ${fmt.format(s.end)}',
+                        style: TextStyle(
+                          color: isCancelled
+                              ? TColor.textSecondary
+                              .withOpacity(0.7)
+                              : TColor.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: isCancelled
+                            ? TColor.textSecondary
+                            : TColor.primary,
+                      ),
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/subs/edit',
+                          arguments: s,
+                        ).then((_) => _loadSubscriptions());
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        )),
       ),
     );
   }

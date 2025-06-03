@@ -31,7 +31,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
   Future<void> _loadOrder() async {
     try {
-      final res = await ApiService.getWithToken('${ApiRoutes.cleanerOrders}/${widget.orderId}');
+      final res = await ApiService.getWithToken(
+          '${ApiRoutes.cleanerOrders}/${widget.orderId}');
       if (res.statusCode == 200) {
         _order = jsonDecode(res.body);
       } else {
@@ -65,12 +66,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       if (res.statusCode == 200) {
         await _loadOrder();
         _pickedImage = null;
-        _show('✅ Order marked as finished');
+        _show(' Order marked as finished');
       } else {
         throw 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _show('❌ Failed: $e');
+      _show(' Failed: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -83,12 +84,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     return Scaffold(
       backgroundColor: TColor.background,
       appBar: AppBar(
-        backgroundColor: TColor.card,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: IconThemeData(color: TColor.primary),
         title: Text('Order #${widget.orderId}',
             style: TextStyle(
-                color: TColor.primaryText, fontWeight: FontWeight.w600)),
+                color: TColor.textPrimary, fontWeight: FontWeight.w600)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -99,7 +100,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           ? FloatingActionButton.extended(
         onPressed: _finish,
         backgroundColor: TColor.primary,
-        icon: const Icon(Icons.check),
+        icon: const Icon(Icons.check, color: Colors.white),
         label: const Text('Finish'),
       )
           : null,
@@ -131,7 +132,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
-                  color: TColor.primaryText)),
+                  color: TColor.textPrimary)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -139,8 +140,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 .map((e) => Chip(
               label: Text(e),
               backgroundColor: TColor.primary.withOpacity(.1),
-              labelStyle:
-              TextStyle(color: TColor.primaryText, fontSize: 12),
+              labelStyle: TextStyle(
+                  color: TColor.textPrimary, fontSize: 12),
             ))
                 .toList(),
           ),
@@ -193,11 +194,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     children: [
       Text('$k: ',
           style: TextStyle(
-              fontWeight: FontWeight.bold, color: TColor.primaryText)),
+              fontWeight: FontWeight.bold, color: TColor.textPrimary)),
       Expanded(
-          child: Text(v,
-              style:
-              TextStyle(fontSize: 14, color: TColor.secondaryText))),
+          child:
+          Text(v, style: TextStyle(fontSize: 14, color: TColor.textSecondary))),
     ],
   );
 

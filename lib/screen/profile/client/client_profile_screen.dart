@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
-import 'dart:convert';
+
+import 'package:uytaza/screen/profile/client/settings_screen.dart';
+
+
 import 'choose_address_screen.dart';
-import 'settings_screen.dart';
 
 class ClientProfileScreen extends StatefulWidget {
   const ClientProfileScreen({super.key});
@@ -47,14 +50,21 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         setState(() {
           _initialData = Map<String, dynamic>.from(data);
-          _emailController.text = data['Email'] ?? data['email'] ?? '';
-          _firstNameController.text = data['FirstName'] ?? data['first_name'] ?? '';
-          _lastNameController.text = data['LastName'] ?? data['last_name'] ?? '';
-          _phoneController.text = data['PhoneNumber'] ?? data['phone_number'] ?? '';
-          _addressController.text = data['Address'] ?? data['address'] ?? '';
-          _roleController.text = data['Role'] ?? data['role'] ?? 'Client';
+          _emailController.text =
+              data['Email'] ?? data['email'] ?? '';
+          _firstNameController.text =
+              data['FirstName'] ?? data['first_name'] ?? '';
+          _lastNameController.text =
+              data['LastName'] ?? data['last_name'] ?? '';
+          _phoneController.text =
+              data['PhoneNumber'] ?? data['phone_number'] ?? '';
+          _addressController.text =
+              data['Address'] ?? data['address'] ?? '';
+          _roleController.text =
+              data['Role'] ?? data['role'] ?? 'Client';
 
-          String dob = data['DateOfBirth'] ?? data['date_of_birth'] ?? '';
+          String dob =
+              data['DateOfBirth'] ?? data['date_of_birth'] ?? '';
           if (dob.isNotEmpty) {
             dob = dob.split('T')[0];
             if (dob == '0001-01-01') dob = '';
@@ -70,7 +80,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           _loading = false;
         });
       } else {
-        setState(() => _error = 'Ошибка загрузки профиля: ${res.statusCode}');
+        setState(() =>
+        _error = 'Ошибка загрузки профиля: ${res.statusCode}');
       }
     } catch (e) {
       setState(() => _error = 'Ошибка: $e');
@@ -80,32 +91,41 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   Future<void> _updateProfile() async {
     final updatedFields = <String, dynamic>{};
 
-    if (_firstNameController.text != (_initialData['FirstName'] ?? _initialData['first_name'] ?? '')) {
+    if (_firstNameController.text !=
+        (_initialData['FirstName'] ?? _initialData['first_name'] ?? '')) {
       updatedFields['first_name'] = _firstNameController.text;
     }
-    if (_lastNameController.text != (_initialData['LastName'] ?? _initialData['last_name'] ?? '')) {
+    if (_lastNameController.text !=
+        (_initialData['LastName'] ?? _initialData['last_name'] ?? '')) {
       updatedFields['last_name'] = _lastNameController.text;
     }
-    if (_phoneController.text != (_initialData['PhoneNumber'] ?? _initialData['phone_number'] ?? '')) {
+    if (_phoneController.text !=
+        (_initialData['PhoneNumber'] ?? _initialData['phone_number'] ?? '')) {
       updatedFields['phone_number'] = _phoneController.text;
     }
-    if (_addressController.text != (_initialData['Address'] ?? _initialData['address'] ?? '')) {
+    if (_addressController.text !=
+        (_initialData['Address'] ?? _initialData['address'] ?? '')) {
       updatedFields['address'] = _addressController.text;
     }
 
-    final oldDob = (_initialData['DateOfBirth'] ?? _initialData['date_of_birth'] ?? '').split('T')[0];
+    final oldDob =
+    (_initialData['DateOfBirth'] ?? _initialData['date_of_birth'] ?? '')
+        .split('T')[0];
     if (_dobController.text != oldDob) {
-      if (_dobController.text.isNotEmpty && !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(_dobController.text)) {
+      if (_dobController.text.isNotEmpty &&
+          !RegExp(r'^\d{4}-\d{2}-\d{2}$')
+              .hasMatch(_dobController.text)) {
         _showError('Неверный формат даты. Используйте ГГГГ-ММ-ДД');
         return;
       }
       if (_dobController.text.isNotEmpty) {
-        updatedFields['date_of_birth'] = '${_dobController.text}T00:00:00Z';
+        updatedFields['date_of_birth'] =
+        '${_dobController.text}T00:00:00Z';
       }
-
     }
 
-    if (_selectedGender != null && _selectedGender != (_initialData['Gender'] ?? _initialData['gender'] ?? '')) {
+    if (_selectedGender !=
+        (_initialData['Gender'] ?? _initialData['gender'] ?? '')) {
       updatedFields['gender'] = _selectedGender;
     }
 
@@ -115,7 +135,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     }
 
     try {
-      final response = await ApiService.putWithToken('/api/auth/profile', updatedFields);
+      final response = await ApiService.putWithToken(
+          '/api/auth/profile', updatedFields);
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Профиль обновлён')),
@@ -132,7 +153,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
@@ -141,7 +165,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: TColor.primary,
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 
@@ -149,31 +175,56 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       return Scaffold(
         backgroundColor: TColor.primary,
         body: Center(
-          child: Text(_error!, style: const TextStyle(color: Colors.white)),
+          child: Text(
+            _error!,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
+
+    final fullName = (_firstNameController.text +
+        ' ' +
+        _lastNameController.text)
+        .trim();
 
     return Scaffold(
       backgroundColor: TColor.primary,
       body: Column(
         children: [
-          _buildHeader(),
+          _buildHeader(fullName),
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(30)),
+                boxShadow: TColor.softShadow,
+              ),
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 children: [
-                  _buildReadonlyTile(Icons.email, 'Email', _emailController.text),
+                  _buildReadonlyTile(
+                    Icons.email,
+                    'Email',
+                    _emailController.text,
+                  ),
                   _buildEditableField(
-                      Icons.person, 'First Name', _firstNameController),
+                    Icons.person,
+                    'First Name',
+                    _firstNameController,
+                  ),
                   _buildEditableField(
-                      Icons.person_outline, 'Last Name', _lastNameController),
+                    Icons.person_outline,
+                    'Last Name',
+                    _lastNameController,
+                  ),
                   _buildEditableField(
-                      Icons.phone, 'Phone Number', _phoneController),
+                    Icons.phone,
+                    'Phone Number',
+                    _phoneController,
+                  ),
                   _buildAddressField(),
                   _buildDateField(),
                   _buildGenderField(),
@@ -186,46 +237,57 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    final fullName =
-    (_firstNameController.text + ' ' + _lastNameController.text).trim();
+  Widget _buildHeader(String fullName) {
     return SafeArea(
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                const Expanded(
-                  child: Text('Details',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(
+                    '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SettingsScreen()),
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
           const CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 50, color: Colors.grey)),
+            radius: 40,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.person, size: 50, color: Colors.grey),
+          ),
           const SizedBox(height: 12),
-          Text(fullName.isNotEmpty ? fullName : 'Not specified',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
+          Text(
+            fullName.isNotEmpty ? fullName : 'Not specified',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(_roleController.text,
-              style: const TextStyle(color: Colors.white70, fontSize: 16)),
+          Text(
+            _roleController.text,
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
+          ),
           const SizedBox(height: 12),
         ],
       ),
@@ -233,27 +295,42 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildReadonlyTile(IconData icon, String label, String value) {
-    final displayText = value.isNotEmpty ? value : "Нет данных";
+    final displayText =
+    value.isNotEmpty ? value : "Нет данных";
     return ListTile(
-      leading: Icon(icon, color: TColor.secondary),
-      title: Text(label,
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayText,
-          style: TextStyle(color: TColor.secondaryText)),
+      leading: Icon(icon, color: TColor.primary),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        displayText,
+        style: TextStyle(color: TColor.textSecondary),
+      ),
     );
   }
 
   Widget _buildEditableField(
       IconData icon, String label, TextEditingController controller) {
-    final displayText = controller.text.isNotEmpty ? controller.text : "Нет данных";
+    final displayText = controller.text.isNotEmpty
+        ? controller.text
+        : "Нет данных";
     return ListTile(
-      leading: Icon(icon, color: TColor.secondary),
-      title: Text(label,
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayText,
-          style: TextStyle(color: TColor.secondaryText)),
+      leading: Icon(icon, color: TColor.primary),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        displayText,
+        style: TextStyle(color: TColor.textSecondary),
+      ),
       trailing: IconButton(
         icon: Icon(Icons.edit, color: TColor.primary),
         onPressed: () => _editFieldDialog(label, controller),
@@ -262,20 +339,29 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildAddressField() {
-    final displayValue = _addressController.text.isNotEmpty ? _addressController.text : "Нет данных";
+    final displayValue = _addressController.text.isNotEmpty
+        ? _addressController.text
+        : "Нет данных";
     return ListTile(
-      leading: Icon(Icons.location_on, color: TColor.secondary),
-      title: Text('Address',
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayValue,
-          style: TextStyle(color: TColor.secondaryText)),
+      leading: Icon(Icons.location_on, color: TColor.primary),
+      title: Text(
+        'Address',
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        displayValue,
+        style: TextStyle(color: TColor.textSecondary),
+      ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () async {
         final res = await Navigator.push<String>(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const ChooseAddressScreen()));
+          context,
+          MaterialPageRoute(
+              builder: (_) => const ChooseAddressScreen()),
+        );
         if (res != null) {
           setState(() => _addressController.text = res);
           _updateProfile();
@@ -285,21 +371,30 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildDateField() {
-    final displayValue = _dobController.text.isNotEmpty ? _dobController.text : "Нет данных";
+    final displayValue = _dobController.text.isNotEmpty
+        ? _dobController.text
+        : "Нет данных";
     return ListTile(
-      leading: Icon(Icons.cake, color: TColor.secondary),
-      title: Text('Date of Birth',
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(displayValue,
-          style: TextStyle(color: TColor.secondaryText)),
+      leading: Icon(Icons.cake, color: TColor.primary),
+      title: Text(
+        'Date of Birth',
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        displayValue,
+        style: TextStyle(color: TColor.textSecondary),
+      ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () async {
+        final initialDate = _dobController.text.isNotEmpty
+            ? DateTime.parse(_dobController.text)
+            : DateTime.now();
         final picked = await showDatePicker(
           context: context,
-          initialDate: _dobController.text.isNotEmpty
-              ? DateTime.parse(_dobController.text)
-              : DateTime.now(),
+          initialDate: initialDate,
           firstDate: DateTime(1900),
           lastDate: DateTime.now(),
         );
@@ -314,17 +409,23 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
 
   Widget _buildGenderField() {
     return ListTile(
-      leading: Icon(Icons.person_outline, color: TColor.secondary),
-      title: Text('Gender',
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
+      leading: Icon(Icons.person_outline, color: TColor.primary),
+      title: Text(
+        'Gender',
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       trailing: DropdownButton<String?>(
         value: _selectedGender,
         items: [
           const DropdownMenuItem<String?>(
             value: null,
-            child: Text("Не указано",
-                style: TextStyle(color: Colors.grey)),
+            child: Text(
+              "Не указано",
+              style: TextStyle(color: Colors.grey),
+            ),
           ),
           ..._genders.map((String value) {
             return DropdownMenuItem<String?>(
@@ -343,7 +444,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
-  void _editFieldDialog(String label, TextEditingController controller) {
+  void _editFieldDialog(
+      String label, TextEditingController controller) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -362,6 +464,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
               _updateProfile();
               Navigator.pop(context);
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TColor.primary,
+            ),
             child: const Text('Save'),
           ),
         ],

@@ -9,6 +9,7 @@ class RoundTextfield extends StatelessWidget {
   final bool obscureText;
   final Widget? right;
   final bool isPadding;
+
   const RoundTextfield({
     super.key,
     required this.hintText,
@@ -28,7 +29,7 @@ class RoundTextfield extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(
-          color: TColor.placeholder.withOpacity(0.5),
+          color: TColor.divider.withOpacity(1.0),
           width: 0.5,
         ),
         borderRadius: BorderRadius.circular(radius),
@@ -38,7 +39,7 @@ class RoundTextfield extends StatelessWidget {
         keyboardType: keyboardType,
         textAlign: TextAlign.center,
         obscureText: obscureText,
-        style: TextStyle(color: TColor.primaryText, fontSize: 17),
+        style: TextStyle(color: TColor.textPrimary, fontSize: 17),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
@@ -63,6 +64,7 @@ class NewRoundTextfield extends StatelessWidget {
   final bool obscureText;
   final Widget? right;
   final bool isPadding;
+
   const NewRoundTextfield({
     super.key,
     required this.hintText,
@@ -82,15 +84,14 @@ class NewRoundTextfield extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+        boxShadow: TColor.softShadow,
       ),
-
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         textAlign: TextAlign.center,
         obscureText: obscureText,
-        style: TextStyle(color: TColor.primaryText, fontSize: 17),
+        style: TextStyle(color: TColor.textPrimary, fontSize: 17),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_routes.dart';
-import 'package:uytaza/screen/models/cleaning_service.dart';
 import 'package:uytaza/api/api_service.dart';
+import 'package:uytaza/screen/models/cleaning_service.dart';
 import 'package:uytaza/screen/profile/profile_api.dart';
 import 'package:uytaza/screen/profile/client/choose_address_screen.dart';
+import 'package:uytaza/common/extension.dart';
+import 'order_success_page.dart';
 
 class OrderBuildPage extends StatefulWidget {
   const OrderBuildPage({super.key});
@@ -17,7 +19,7 @@ class OrderBuildPage extends StatefulWidget {
 
 class _OrderBuildPageState extends State<OrderBuildPage> {
   // ────────── STATE ──────────
-  String selectedType = 'custom';                    // default ― custom
+  String selectedType = 'custom';
   final Set<String> selectedServiceIds = {};
   DateTime selectedDate = DateTime.now();
   TimeOfDay selectedTime = const TimeOfDay(hour: 9, minute: 0);
@@ -26,14 +28,35 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
   double totalPrice = 0;
 
   bool loadingServices = true;
-  bool loadingProfile  = true;
-  bool submitting      = false;
+  bool loadingProfile = true;
+  bool submitting = false;
 
   String? _profileAddress;
   final addressCtl = TextEditingController();
-  final noteCtl    = TextEditingController();
+  final noteCtl = TextEditingController();
 
-  // ────────── INIT ──────────
+  // Список типов уборки для карусели
+  final List<_CleaningType> cleaningTypes = [
+    _CleaningType(
+      key: 'custom',
+      label: 'Custom',
+      asset: 'assets/img/custom_service.png',
+    ),
+    _CleaningType(
+      key: 'initial',
+      label: 'Initial',
+      asset: 'assets/img/initial_service.png',
+    ),
+    _CleaningType(
+      key: 'standard',
+      label: 'Standard',
+      asset: 'assets/img/standard_service.png',
+    ),
+  ];
+
+  final PageController _typeController =
+  PageController(viewportFraction: 0.75);
+
   @override
   void initState() {
     super.initState();
@@ -46,7 +69,10 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       final res = await ApiService.getWithToken(ApiRoutes.services);
       if (res.statusCode == 200) {
         final list = jsonDecode(res.body) as List<dynamic>;
-        services   = list.map((e) => CleaningService.fromJson(e)).toList();
+        services = list
+            .map((e) => CleaningService.fromJson(
+            Map<String, dynamic>.from(e)))
+            .toList();
       } else {
         _showError('Services HTTP ${res.statusCode}');
       }
@@ -62,7 +88,6 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     if (mounted) setState(() => loadingProfile = false);
   }
 
-  // ────────── HELPERS ──────────
   DateTime _combineDateTime() => DateTime(
     selectedDate.year,
     selectedDate.month,
@@ -71,12 +96,12 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     selectedTime.minute,
   );
 
-  /// 2025-05-20T10:00:00Z  (UTC, без миллисекунд)
   String _backendDate(DateTime dtUtc) {
     final utc = dtUtc.toUtc();
     final core = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(utc);
-    return '$core'+'Z';  // или '$core' + 'Z'
+    return '$core' + 'Z';
   }
+
   void _recalcTotal() {
     totalPrice = services
         .where((s) => selectedServiceIds.contains(s.id))
@@ -90,36 +115,42 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     });
   }
 
-  // ────────── ADDRESS PICKER ──────────
   Future<void> _pickAddress() async {
     if (loadingProfile) return;
+
     final picked = await showModalBottomSheet<String>(
       context: context,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
       builder: (_) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (_profileAddress != null)
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_profileAddress != null)
+              ListTile(
+                leading: const Icon(Icons.person_pin_circle),
+                title: const Text('Use profile address'),
+                subtitle: Text(_profileAddress!),
+                onTap: () => Navigator.pop(context, _profileAddress),
+              ),
             ListTile(
-              leading: const Icon(Icons.person_pin_circle),
-              title: const Text('Use profile address'),
-              subtitle: Text(_profileAddress!),
-              onTap: () => Navigator.pop(context, _profileAddress),
-            ),
-          ListTile(
-            leading: const Icon(Icons.map_outlined),
-            title: const Text('Choose on map'),
-            onTap: () async {
-              final addr = await Navigator.push<String>(
+              leading: const Icon(Icons.map_outlined),
+              title: const Text('Choose on map'),
+              onTap: () async {
+                final addr = await Navigator.push<String>(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const ChooseAddressScreen()));
-              Navigator.pop(context, addr);
-            },
-          ),
-        ]),
+                    builder: (_) => const ChooseAddressScreen(),
+                  ),
+                );
+                Navigator.pop(context, addr);
+              },
+            ),
+          ],
+        ),
       ),
     );
+
     if (picked != null && picked.isNotEmpty) {
       setState(() => addressCtl.text = picked);
     }
@@ -127,31 +158,33 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
 
   Future<void> _createOrder() async {
     if (addressCtl.text.trim().isEmpty) {
-      _showError('Address required'); return;
+      _showError('Address required');
+      return;
     }
     if (selectedServiceIds.isEmpty) {
-      _showError('Pick at least one service'); return;
+      _showError('Pick at least one service');
+      return;
     }
 
     setState(() => submitting = true);
 
     final body = {
-      "address"     : addressCtl.text.trim(),
-      "service_ids" : selectedServiceIds.toList(),
+      "address": addressCtl.text.trim(),
+      "service_ids": selectedServiceIds.toList(),
       "service_type": selectedType,
-      "date"        : _backendDate(_combineDateTime()),
-      "comment"     : noteCtl.text.trim(),
+      "date": _backendDate(_combineDateTime()),
+      "comment": noteCtl.text.trim(),
     };
 
     try {
-      final res = await ApiService.postWithToken(ApiRoutes.orders, body);
+      final res =
+      await ApiService.postWithToken(ApiRoutes.orders, body);
       if (res.statusCode == 201) {
         final Map<String, dynamic> orderJson = res.body.isNotEmpty
             ? Map<String, dynamic>.from(jsonDecode(res.body))
             : {};
         await _onOrderSuccess(orderJson);
       } else {
-        debugPrint('Order-400 → ${res.body}');
         final map = res.body.isNotEmpty
             ? jsonDecode(res.body)
             : {'error': res.statusCode};
@@ -164,12 +197,10 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     }
   }
 
-  Future<void> _onOrderSuccess(Map<String, dynamic> orderJson) async {
+  Future<void> _onOrderSuccess(
+      Map<String, dynamic> orderJson) async {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Order created')),
-    );
     final repeat = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -190,26 +221,34 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     );
 
     if (repeat == true) {
-
       Navigator.pushReplacementNamed(
         context,
         '/new-sub',
         arguments: {
           'service_ids': orderJson['service_ids'],
-          'start_date' : orderJson['date'],
-          'price'      : orderJson['total_price'] ?? totalPrice,
+          'start_date': orderJson['date'],
+          'price': orderJson['total_price'] ?? totalPrice,
         },
       );
     } else {
-      Navigator.pushNamedAndRemoveUntil(
+      Navigator.pushReplacement(
         context,
-        '/main',
-            (_) => false,
-        arguments: 2,
+        MaterialPageRoute(
+          builder: (_) => const OrderSuccessPage(),
+        ),
       );
     }
   }
 
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
   // ────────── UI ──────────
   @override
@@ -220,52 +259,62 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('New Order',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'New Order',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
       body: loadingServices
           ? const Center(child: CircularProgressIndicator(color: Colors.white))
-          : Column(children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
+          : Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(40))),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildAddress(),
-                  const SizedBox(height: 20),
-                  _buildNote(),
-                  const SizedBox(height: 20),
-                  _buildType(),
-                  const SizedBox(height: 20),
-                  _buildServices(),
-                  const SizedBox(height: 20),
-                  _buildCalendar(),
-                  const SizedBox(height: 20),
-                  _buildTime(),
-                  const SizedBox(height: 20),
-                  _buildTotal(),
-                ],
+                  BorderRadius.vertical(top: Radius.circular(40)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAddress(),
+                    const SizedBox(height: 20),
+                    _buildNote(),
+                    const SizedBox(height: 20),
+                    _buildTypeCarousel(),
+                    const SizedBox(height: 20),
+                    _buildServicesChips(),
+                    const SizedBox(height: 20),
+                    _buildCalendar(),
+                    const SizedBox(height: 20),
+                    _buildTime(),
+                    const SizedBox(height: 20),
+                    _buildTotal(),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        _buildSubmitBtn(),
-      ]),
+          _buildSubmitBtn(),
+        ],
+      ),
     );
   }
 
-  // ────────── Widgets ──────────
   Widget _buildAddress() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('Address',
-          style: TextStyle(fontWeight: FontWeight.w600)),
+      const Text(
+        'Address',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
       const SizedBox(height: 8),
       GestureDetector(
         onTap: _pickAddress,
@@ -277,8 +326,12 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
                   ? 'Loading...'
                   : 'Tap to select address',
               suffixIcon: const Icon(Icons.location_on_outlined),
+              fillColor: TColor.background,
+              filled: true,
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: TColor.divider),
+              ),
             ),
           ),
         ),
@@ -289,67 +342,128 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
   Widget _buildNote() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('Apartment / Floor / Note',
-          style: TextStyle(fontWeight: FontWeight.w600)),
+      const Text(
+        'Apartment / Floor / Note',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
       const SizedBox(height: 8),
       TextField(
         controller: noteCtl,
         maxLines: 3,
         decoration: InputDecoration(
           hintText: 'Optional',
-          border:
-          OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          fillColor: TColor.background,
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: TColor.divider),
+          ),
         ),
       ),
     ],
   );
 
-  Widget _buildType() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text('Cleaning Type',
-          style: TextStyle(fontWeight: FontWeight.w600)),
-      const SizedBox(height: 10),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        _typeCard('custom',   'Custom',   'assets/img/custom_service.png'),
-        _typeCard('initial',   'Initial',   'assets/img/initial_service.png'),
-        _typeCard('standard', 'Standard', 'assets/img/carpet_service.png'),
-      ]),
-    ],
-  );
-
-  Widget _typeCard(String type, String label, String img) {
-    final sel = selectedType == type;
-    return InkWell(
-      onTap: () => setState(() => selectedType = type),
-      child: Column(children: [
-        Container(
-          height: 120,
-          width: MediaQuery.of(context).size.width * .43,
-          decoration: BoxDecoration(
-            color: sel ? TColor.secondary.withOpacity(.2) : Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: sel ? TColor.secondary : Colors.transparent),
-          ),
-          child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.asset(img, fit: BoxFit.cover)),
+  Widget _buildTypeCarousel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Cleaning Type',
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-        const SizedBox(height: 4),
-        Icon(sel ? Icons.check_circle : Icons.circle_outlined,
-            color: sel ? TColor.secondary : Colors.grey),
-      ]),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 180,
+          child: PageView.builder(
+            controller: _typeController,
+            itemCount: cleaningTypes.length,
+            onPageChanged: (i) {
+              setState(() => selectedType = cleaningTypes[i].key);
+            },
+            itemBuilder: (context, i) {
+              final type = cleaningTypes[i];
+              final isSel = selectedType == type.key;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: isSel ? 0 : 10,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                  isSel ? TColor.primary.withOpacity(0.1) : TColor.background,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isSel ? TColor.primary : TColor.divider,
+                    width: isSel ? 2 : 1,
+                  ),
+                  boxShadow: isSel
+                      ? [
+                    BoxShadow(
+                      color: TColor.primary.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                      : null,
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    _typeController.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                    setState(() => selectedType = type.key);
+                  },
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(14)),
+                          child: Image.asset(
+                            type.asset,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        type.label,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight:
+                          isSel ? FontWeight.bold : FontWeight.normal,
+                          color:
+                          isSel ? TColor.textPrimary : TColor.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Icon(
+                        isSel ? Icons.check_circle : Icons.circle_outlined,
+                        color: isSel ? TColor.primary : Colors.grey,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildServices() => Column(
+  Widget _buildServicesChips() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('Additional Services',
-          style: TextStyle(fontWeight: FontWeight.w600)),
+      const Text(
+        'Additional Services',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
       const SizedBox(height: 10),
       Wrap(
         spacing: 10,
@@ -362,31 +476,39 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
   Widget _serviceChip(CleaningService s) {
     final sel = selectedServiceIds.contains(s.id);
     return ChoiceChip(
-      label: Text('${s.name} (${s.price} ₸)'),
+      label: Text('${s.name} (${s.price.toStringAsFixed(0)} ₸)'),
       selected: sel,
       onSelected: (_) => _toggleService(s.id),
-      selectedColor: TColor.secondary,
-      labelStyle: TextStyle(color: sel ? Colors.white : Colors.black),
+      selectedColor: TColor.primary,
+      labelStyle: TextStyle(
+        color: sel ? Colors.white : TColor.textPrimary,
+      ),
+      backgroundColor: TColor.background,
     );
   }
 
   Widget _buildCalendar() {
-    final firstDay      = DateTime(selectedDate.year, selectedDate.month, 1);
-    final lastDay       = DateTime(selectedDate.year, selectedDate.month + 1, 0);
-    final daysCount     = lastDay.day;
-    final startWeekday  = firstDay.weekday;
-    List<Widget> rows   = [];
+    final firstDay = DateTime(selectedDate.year, selectedDate.month, 1);
+    final lastDay = DateTime(selectedDate.year, selectedDate.month + 1, 0);
+    final daysCount = lastDay.day;
+    final startWeekday = firstDay.weekday;
+    List<Widget> rows = [];
 
-    // weekday header
     rows.add(Row(
-        children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-            .map((d) => Expanded(
-            child: Center(
-                child: Text(d,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: TColor.primary)))))
-            .toList()));
+      children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          .map((d) => Expanded(
+        child: Center(
+          child: Text(
+            d,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: TColor.primary,
+            ),
+          ),
+        ),
+      ))
+          .toList(),
+    ));
 
     List<Widget> currentRow = [];
     for (int i = 1; i < startWeekday; i++) {
@@ -394,14 +516,17 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     }
 
     for (int day = 1; day <= daysCount; day++) {
-      final cur = DateTime(selectedDate.year, selectedDate.month, day);
+      final cur = DateTime(
+          selectedDate.year, selectedDate.month, day);
       final sel = selectedDate.day == day;
-      final past =
-      cur.isBefore(DateTime.now().subtract(const Duration(days: 1)));
+      final past = cur.isBefore(
+          DateTime.now().subtract(const Duration(days: 1)));
 
       currentRow.add(Expanded(
         child: GestureDetector(
-          onTap: past ? null : () => setState(() => selectedDate = cur),
+          onTap: past
+              ? null
+              : () => setState(() => selectedDate = cur),
           child: Container(
             margin: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -409,13 +534,16 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
-              child: Text(day.toString(),
-                  style: TextStyle(
-                      color: past
-                          ? Colors.grey
-                          : sel
-                          ? Colors.white
-                          : Colors.black)),
+              child: Text(
+                day.toString(),
+                style: TextStyle(
+                  color: past
+                      ? Colors.grey
+                      : sel
+                      ? Colors.white
+                      : Colors.black,
+                ),
+              ),
             ),
           ),
         ),
@@ -436,25 +564,42 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          IconButton(
+        Row(
+          mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
               onPressed: () => setState(() {
-                selectedDate =
-                    DateTime(selectedDate.year, selectedDate.month - 1, 1);
+                selectedDate = DateTime(
+                  selectedDate.year,
+                  selectedDate.month - 1,
+                  1,
+                );
               }),
-              icon: const Icon(Icons.chevron_left)),
-          Text(DateFormat('MMMM yyyy').format(selectedDate),
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          IconButton(
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Text(
+              DateFormat('MMMM yyyy').format(selectedDate),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            IconButton(
               onPressed: () => setState(() {
-                selectedDate =
-                    DateTime(selectedDate.year, selectedDate.month + 1, 1);
+                selectedDate = DateTime(
+                  selectedDate.year,
+                  selectedDate.month + 1,
+                  1,
+                );
               }),
-              icon: const Icon(Icons.chevron_right)),
-        ]),
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
         ...rows,
         const SizedBox(height: 8),
-        Text('Selected: ${DateFormat('dd.MM.yyyy').format(selectedDate)}'),
+        Text(
+          'Selected: ${DateFormat('dd.MM.yyyy').format(selectedDate)}',
+          style: TextStyle(color: TColor.textSecondary),
+        ),
       ],
     );
   }
@@ -462,8 +607,10 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
   Widget _buildTime() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('Select Time',
-          style: TextStyle(fontWeight: FontWeight.w600)),
+      const Text(
+        'Select Time',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
       const SizedBox(height: 10),
       GestureDetector(
         onTap: () async {
@@ -475,13 +622,18 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
           padding:
           const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(10)),
+            color: TColor.background,
+            border: Border.all(color: TColor.divider),
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
             children: [
-              Text(selectedTime.format(context),
-                  style: const TextStyle(fontSize: 16)),
+              Text(
+                selectedTime.format(context),
+                style: const TextStyle(fontSize: 16),
+              ),
               const Icon(Icons.access_time),
             ],
           ),
@@ -495,9 +647,11 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     children: [
       const Divider(),
       const SizedBox(height: 10),
-      Text('Total (not sent): ${totalPrice.toStringAsFixed(2)} ₸',
-          style: const TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold)),
+      Text(
+        'Total: ${totalPrice.toStringAsFixed(0)} ₸',
+        style: const TextStyle(
+            fontSize: 18, fontWeight: FontWeight.bold),
+      ),
     ],
   );
 
@@ -507,24 +661,39 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     child: ElevatedButton(
       onPressed: submitting ? null : _createOrder,
       style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-          backgroundColor: TColor.primary,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12))),
+        minimumSize: const Size.fromHeight(50),
+        backgroundColor: TColor.primary,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)),
+      ),
       child: submitting
-          ? const CircularProgressIndicator(color: Colors.white)
-          : const Text('Create Order',
-          style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16)),
+          ? const SizedBox(
+        height: 20,
+        width: 20,
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 2,
+        ),
+      )
+          : const Text(
+        'Create Order',
+        style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16),
+      ),
     ),
   );
+}
 
-  // ────────── helpers ──────────
-  void _showError(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.red));
-  }
+// Класс для типа уборки
+class _CleaningType {
+  final String key;
+  final String label;
+  final String asset;
+  const _CleaningType({
+    required this.key,
+    required this.label,
+    required this.asset,
+  });
 }

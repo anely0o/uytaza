@@ -17,37 +17,34 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.primary,
+      backgroundColor: TColor.background,
       appBar: AppBar(
-        backgroundColor: TColor.primary,
+        backgroundColor: Colors.white, // Neutral navbar
         elevation: 0,
         leading: IconButton(
           onPressed: () {
             context.push(const RateOfServiceScreen());
           },
-          icon: Image.asset("assets/img/menu.png", width: 20, height: 20),
+          icon: Icon(Icons.menu, color: TColor.primary),
         ),
-        title: Row(
-          children: [
-            Image.asset(
-              "assets/img/only_logo.png",
-              height: 200,
-              fit: BoxFit.fitHeight,
-            ),
-          ],
+        title: Image.asset(
+          "assets/img/only_logo.png",
+          height: 40,
+          fit: BoxFit.fitHeight,
         ),
+        centerTitle: true,
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Hi Choose",
+                Text(
+                  "Hi, Choose",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: TColor.primary,
                     fontSize: 27,
                     fontWeight: FontWeight.bold,
                   ),
@@ -57,16 +54,15 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                     Text(
                       "Your",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: TColor.primary,
                         fontSize: 27,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     Text(
                       " Service Area",
                       style: TextStyle(
-                        color: TColor.primaryText,
+                        color: TColor.textPrimary,
                         fontSize: 27,
                         fontWeight: FontWeight.bold,
                       ),
@@ -85,20 +81,12 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                         },
                         child: Container(
                           padding: const EdgeInsets.all(15),
-
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 2,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            boxShadow: TColor.softShadow,
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Row(
                                 children: [
@@ -126,13 +114,14 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                                 style: TextStyle(
                                   color: TColor.primary,
                                   fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
-                                " Personal",
+                                "Personal",
                                 style: TextStyle(
-                                  color: TColor.primaryText,
-                                  fontSize: 20,
+                                  color: TColor.textPrimary,
+                                  fontSize: 16,
                                 ),
                               ),
                             ],
@@ -140,9 +129,7 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(width: 8),
-
                     Expanded(
                       child: InkWell(
                         onTap: () {
@@ -152,20 +139,12 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                         },
                         child: Container(
                           padding: const EdgeInsets.all(15),
-
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 2,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            boxShadow: TColor.softShadow,
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Row(
                                 children: [
@@ -193,13 +172,14 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                                 style: TextStyle(
                                   color: TColor.primary,
                                   fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
-                                " Organisation",
+                                "Organisation",
                                 style: TextStyle(
-                                  color: TColor.primaryText,
-                                  fontSize: 20,
+                                  color: TColor.textPrimary,
+                                  fontSize: 16,
                                 ),
                               ),
                             ],
@@ -214,9 +194,9 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
           ),
           Expanded(
             child: Container(
-              width: double.maxFinite,
+              width: double.infinity,
               decoration: BoxDecoration(
-                color: TColor.secondary,
+                color: TColor.card,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -225,29 +205,22 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 15,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: TColor.background,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: TextField(
                         style: TextStyle(
-                          color: TColor.primaryText,
+                          color: TColor.textPrimary,
                           fontSize: 17,
                         ),
                         decoration: InputDecoration(
                           prefixIcon: Container(
                             width: 40,
                             alignment: Alignment.center,
-                            child: Image.asset(
-                              "assets/img/search.png",
-                              width: 15,
-                              height: 15,
-                            ),
+                            child: Icon(Icons.search, color: TColor.primary),
                           ),
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -260,27 +233,28 @@ class _ChooseServiceScreenState extends State<ChooseServiceScreen> {
                       ),
                     ),
                   ),
-
                   const Spacer(),
-
                   Padding(
                     padding: const EdgeInsets.all(10),
                     child: Row(
                       children: [
                         Expanded(
                           child: RoundButton(
-                            title: "Late",
+                            title: "Later",
                             width: 100,
-                            lineColor: Colors.white,
+                            lineColor: TColor.primary,
                             type: RoundButtonType.line,
                             onPressed: () {},
+                            textColor: TColor.primary,
                           ),
                         ),
-                        SizedBox(width: 8),
+                         SizedBox(width: 8),
                         Expanded(
                           child: RoundButton(
                             title: "Search Now",
                             onPressed: () {},
+                            backgroundColor: TColor.primary,
+                            textColor: Colors.white,
                           ),
                         ),
                       ],

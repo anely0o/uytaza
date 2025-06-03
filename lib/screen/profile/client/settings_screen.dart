@@ -18,7 +18,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _toggleNotifications(bool value) {
     setState(() {
       _notificationsEnabled = value;
-      //TODO: persist setting with api
+      // TODO: persist setting with API if needed
     });
   }
 
@@ -31,7 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _logout() async {
     try {
-      final response = await ApiService.postWithToken('/api/auth/logout', {});
+      final response =
+      await ApiService.postWithToken('/api/auth/logout', {});
       if (response.statusCode == 200) {
         await ApiService.logout(); // удалить локальный токен
         if (mounted) {
@@ -47,7 +48,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An error occurred during logout.')),
+        const SnackBar(
+            content:
+            Text('An error occurred during logout.')),
       );
     }
   }
@@ -67,12 +70,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
             topRight: Radius.circular(30),
           ),
+          boxShadow: TColor.softShadow,
         ),
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -94,24 +98,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(
         'Notifications',
         style: TextStyle(
-          color: TColor.primaryText,
+          color: TColor.textPrimary,
           fontWeight: FontWeight.bold,
         ),
       ),
       value: _notificationsEnabled,
-      activeColor: TColor.secondary,
+      activeColor: TColor.accent,
       onChanged: _toggleNotifications,
-      secondary: Icon(Icons.notifications, color: TColor.secondary),
+      secondary: Icon(Icons.notifications, color: TColor.primary),
     );
   }
 
   Widget _buildAboutTile() {
     return ListTile(
-      leading: Icon(Icons.info_outline, color: TColor.secondary),
+      leading: Icon(Icons.info_outline, color: TColor.primary),
       title: Text(
         'About Us',
         style: TextStyle(
-          color: TColor.primaryText,
+          color: TColor.textPrimary,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -122,11 +126,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildLogoutTile() {
     return ListTile(
-      leading: Icon(Icons.logout, color: TColor.secondary),
+      leading: Icon(Icons.logout, color: TColor.primary),
       title: Text(
         'Log Out',
         style: TextStyle(
-          color: TColor.primaryText,
+          color: TColor.textPrimary,
           fontWeight: FontWeight.bold,
         ),
       ),

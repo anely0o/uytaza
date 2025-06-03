@@ -8,7 +8,7 @@ class ProfileApi {
     final res = await ApiService.getWithToken('/api/auth/profile');
     if (res.statusCode == 200) {
       final map = jsonDecode(res.body);
-      return map['address'] as String?;
+      return map['Address'] as String?;
     }
     return null;
   }

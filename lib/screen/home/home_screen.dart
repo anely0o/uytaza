@@ -51,8 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    controller.addListener(() => setState(() =>
-    selectPage = controller.page?.round() ?? 0));
+    controller.addListener(
+          () => setState(() => selectPage = controller.page?.round() ?? 0),
+    );
     _loadProfile();
   }
 
@@ -63,13 +64,15 @@ class _HomeScreenState extends State<HomeScreen> {
         final m = jsonDecode(res.body);
 
         final first = m['FirstName']?.toString() ?? '';
-        final last  = m['LastName']?.toString() ?? '';
+        final last = m['LastName']?.toString() ?? '';
         _name = [first, last].where((e) => e.isNotEmpty).join(' ');
         if (_name.isEmpty) _name = 'User';
 
-        _address   = m['Address']?.toString();
+        _address = m['Address']?.toString();
       }
-    } catch (_) {/* ignore */}
+    } catch (_) {
+      /* ignore */
+    }
     if (mounted) setState(() => _profileLoading = false);
   }
 
@@ -77,13 +80,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF2F4F3),
+      backgroundColor: TColor.background,
 
       // Боковая панель (Drawer)
       drawer: Drawer(
         backgroundColor: Colors.white,
         child: _profileLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+          child: CircularProgressIndicator(),
+        )
             : ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -96,13 +101,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     radius: 24,
                     backgroundImage: _avatarUrl != null
                         ? NetworkImage(_avatarUrl!)
-                        : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                        : const AssetImage(
+                        'assets/img/default_avatar.png')
+                    as ImageProvider,
                   ),
                   const SizedBox(height: 10),
                   Text(
                     _name.isNotEmpty ? _name : 'User',
-                    style: TextStyle(
-                      color: TColor.primaryText,
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -110,43 +117,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_address != null)
                     Text(
                       _address!,
-                      style: TextStyle(
-                        color: TColor.primaryText.withOpacity(0.7),
+                      style: const TextStyle(
+                        color: Colors.white70,
                       ),
                     ),
                 ],
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.add_box_outlined),
+              leading:
+              const Icon(Icons.add_box_outlined, color: Colors.grey),
               title: const Text('New subscription'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SubscriptionBuildPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const SubscriptionBuildPage(),
+                  ),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.repeat),
+              leading: const Icon(Icons.repeat, color: Colors.grey),
               title: const Text('My subscriptions'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SubscriptionsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const SubscriptionsScreen(),
+                  ),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.info_outline),
+              leading: const Icon(Icons.info_outline, color: Colors.grey),
               title: const Text('About Us'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const AboutUsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const AboutUsScreen(),
+                  ),
                 );
               },
             ),
@@ -154,20 +168,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // ✅ Добавлен AppBar с кнопкой боковой панели
-      appBar: AppBar(
-        backgroundColor: TColor.primary,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+      // AppBar убран
 
       // Основной контент
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _buildTopSection(),
-              const SizedBox(height: 20),
               _buildBannerSection(),
               _buildSubscriptionSection(),
             ],
@@ -178,64 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ---------------- Top section with name / address ----------------
-  Widget _buildTopSection() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      decoration: BoxDecoration(
-        color: TColor.primary,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(35),
-          bottomRight: Radius.circular(35),
-        ),
-      ),
-      child: _profileLoading
-          ? const SizedBox(
-          height: 50,
-          child: Center(child: CircularProgressIndicator(color: Colors.white)))
-          : Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundImage: _avatarUrl != null
-                ? NetworkImage(_avatarUrl!)
-                : const AssetImage('assets/img/default_avatar.png')
-            as ImageProvider,
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _name.isNotEmpty ? _name : 'User',
-                style: TextStyle(
-                  color: TColor.primaryText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              if (_address != null)
-                Row(
-                  children: [
-                    Image.asset("assets/img/location.png",
-                        width: 15, height: 15),
-                    const SizedBox(width: 5),
-                    Text(
-                      _address!,
-                      style: TextStyle(
-                        color: TColor.primaryText,
-                        fontSize: 13,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
 
   // ---------------- Banner carousel ----------------
@@ -248,11 +197,14 @@ class _HomeScreenState extends State<HomeScreen> {
           child: PageView.builder(
             controller: controller,
             itemCount: bannerArr.length,
-            itemBuilder: (_, i) => Image.asset(
-              bannerArr[i],
-              width: context.width,
-              height: context.width * 0.57,
-              fit: BoxFit.cover,
+            itemBuilder: (_, i) => ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                bannerArr[i],
+                width: context.width,
+                height: context.width * 0.57,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
         ),
@@ -272,8 +224,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30)),
               ),
-              child: const Text('Get Plan',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Get Plan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         // dots
@@ -283,7 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
               bannerArr.length,
-                  (i) => Container(
+                  (i) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 margin: const EdgeInsets.all(4),
                 width: selectPage == i ? 20 : 8,
                 height: 8,
@@ -311,15 +266,20 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text('Subscription Offers!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Subscription Offers!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               'Hygienic & single-use products | low-contact services',
-              style: TextStyle(fontSize: 14, color: TColor.secondaryText),
+              style: TextStyle(
+                fontSize: 14,
+                color: TColor.textSecondary,
+              ),
             ),
           ),
           SizedBox(

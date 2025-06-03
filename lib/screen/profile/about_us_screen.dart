@@ -8,15 +8,18 @@ class AboutUsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.white, // main page remains white
       appBar: AppBar(
-        backgroundColor: TColor.primary,
-        elevation: 0,
-        title: const Text(
+        backgroundColor: Colors.white, // neutral navbar
+        elevation: 0.5,
+        iconTheme: IconThemeData(color: TColor.primary),
+        title: Text(
           "About Us",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: TColor.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -25,18 +28,15 @@ class AboutUsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [TColor.primary, TColor.secondary.withOpacity(1)],
+                colors: [
+                  TColor.primary,
+                  TColor.primary.withOpacity(0.7)
+                ], // from dark‐blue to a lighter blue
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              boxShadow: TColor.softShadow,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +81,7 @@ class AboutUsScreen extends StatelessWidget {
                     "To provide top-quality, eco-friendly cleaning services with professionalism, care, and a personal touch.",
                     style: TextStyle(
                       fontSize: 15,
-                      color: TColor.secondaryText,
+                      color: TColor.textSecondary,
                       height: 1.5,
                     ),
                   ),
@@ -99,7 +99,7 @@ class AboutUsScreen extends StatelessWidget {
                     "We aim to be your most trusted home cleaning solution, offering convenience and peace of mind in every visit.",
                     style: TextStyle(
                       fontSize: 15,
-                      color: TColor.secondaryText,
+                      color: TColor.textSecondary,
                       height: 1.5,
                     ),
                   ),
@@ -117,7 +117,7 @@ class AboutUsScreen extends StatelessWidget {
                     "📞 Phone: +7 775 270 4135\n📧 Email: contact@uytaza.kz\n📍 Address: Mangilik El C1, Astana",
                     style: TextStyle(
                       fontSize: 15,
-                      color: TColor.secondaryText,
+                      color: TColor.textSecondary,
                       height: 1.5,
                     ),
                   ),

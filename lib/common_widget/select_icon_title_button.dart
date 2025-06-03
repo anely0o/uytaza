@@ -6,6 +6,7 @@ class SelectIconTitleButton extends StatelessWidget {
   final String icon;
   final bool isSelect;
   final VoidCallback onPressed;
+
   const SelectIconTitleButton({
     super.key,
     required this.title,
@@ -36,14 +37,14 @@ class SelectIconTitleButton extends StatelessWidget {
               icon,
               width: 35,
               height: 35,
-              color: isSelect ? TColor.primaryText : TColor.primary,
+              color: isSelect ? Colors.white : TColor.primary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             title,
             style: TextStyle(
-              color: isSelect ? TColor.primaryText : TColor.secondaryText,
+              color: isSelect ? TColor.textPrimary : TColor.textSecondary,
               fontSize: 12,
               fontWeight: isSelect ? FontWeight.bold : FontWeight.normal,
             ),

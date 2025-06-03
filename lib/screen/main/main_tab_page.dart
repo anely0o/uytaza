@@ -1,17 +1,22 @@
+// lib/screen/main/main_tab_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/profile/user_config.dart';
-import 'package:uytaza/screen/home/home_screen.dart';
-import 'package:uytaza/screen/order/client/orders_screen.dart';
-import 'package:uytaza/screen/order/cleaner/cleaner_orders_screen.dart';
-import 'package:uytaza/screen/profile/client/client_profile_screen.dart';
-import 'package:uytaza/screen/profile/cleaner/cleaner_profile_screen.dart';
-import 'package:uytaza/screen/notification/notifications_screen.dart';
-import 'package:uytaza/screen/message/support_home_screen.dart';
+import 'package:uytaza/screen/profile/user_config.dart' show UserRole;
 import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/api/api_routes.dart';
+import 'package:uytaza/screen/order/client/orders_screen.dart';
+import 'package:uytaza/screen/profile/cleaner/cleaner_profile_screen.dart';
+import 'package:uytaza/screen/profile/client/client_profile_screen.dart';
+import 'package:uytaza/screen/notification/notifications_screen.dart';
+import 'package:uytaza/screen/message/support_home_screen.dart';
+import 'package:uytaza/screen/subscription/subscriptions_screen.dart';
+import 'package:uytaza/screen/profile/about_us_screen.dart';
+import 'package:uytaza/screen/history/history_screen.dart';
+
+import '../home/home_screen.dart';
+import '../order/cleaner/cleaner_orders_screen.dart';
 
 class MainTabPage extends StatefulWidget {
   const MainTabPage({super.key});
@@ -27,11 +32,18 @@ class _MainTabPageState extends State<MainTabPage> {
   String? _error;
   int _unread = 0;
 
+  // Профиль клиента
+  String? _address;
+  String? _firstName;
+  String? _lastName;
+  bool _loadingProfile = true;
+
   @override
   void initState() {
     super.initState();
     _loadUserRole();
     _loadUnread();
+    _loadProfile();
   }
 
   @override
@@ -39,22 +51,28 @@ class _MainTabPageState extends State<MainTabPage> {
     super.didChangeDependencies();
     if (_argsHandled) return;
     final arg = ModalRoute.of(context)?.settings.arguments;
-    if (arg is int && arg >= 0 && arg <= 3) _selectedIndex = arg;
+    if (arg is int && arg >= 0 && arg <= 2) {
+      _selectedIndex = arg;
+    }
     _argsHandled = true;
   }
 
   Future<void> _loadUserRole() async {
     try {
       final role = await ApiService.getUserRole();
-      if (mounted) setState(() {
-        _userRole = role;
-        _loadingRole = false;
-      });
+      if (mounted) {
+        setState(() {
+          _userRole = role;
+          _loadingRole = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        _error = '$e';
-        _loadingRole = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = '$e';
+          _loadingRole = false;
+        });
+      }
     }
   }
 
@@ -68,19 +86,38 @@ class _MainTabPageState extends State<MainTabPage> {
     } catch (_) {}
   }
 
+  Future<void> _loadProfile() async {
+    try {
+      final res = await ApiService.getWithToken(ApiRoutes.profile);
+      if (res.statusCode == 200) {
+        final m = jsonDecode(res.body);
+        _address = m['Address']?.toString();
+        _firstName = m['FirstName']?.toString() ?? m['first_name']?.toString();
+        _lastName = m['LastName']?.toString() ?? m['last_name']?.toString();
+      }
+    } catch (_) {
+      // игнорируем
+    }
+    if (mounted) setState(() => _loadingProfile = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loadingRole) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
     if (_error != null || _userRole == null) {
-      return Scaffold(body: Center(child: Text(_error ?? 'Role error')));
+      return Scaffold(
+        body: Center(child: Text(_error ?? 'Role error')),
+      );
     }
 
-    final ordersPage = _userRole == UserRole.cleaner
+    final ordersPage = (_userRole == UserRole.cleaner)
         ? const CleanerOrdersScreen()
         : const OrdersScreen();
-    final profilePage = _userRole == UserRole.cleaner
+    final profilePage = (_userRole == UserRole.cleaner)
         ? const CleanerProfileScreen()
         : const ClientProfileScreen();
 
@@ -89,8 +126,6 @@ class _MainTabPageState extends State<MainTabPage> {
       ordersPage,
       profilePage,
     ];
-
-    final labels = ['Home', 'Orders', 'Profile'];
     final icons = [
       'assets/img/home_icon.png',
       'assets/img/calendar_icon.png',
@@ -103,15 +138,74 @@ class _MainTabPageState extends State<MainTabPage> {
         child: ListView(
           padding: const EdgeInsets.only(top: 40, left: 16, right: 16),
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.white),
-              child: Text(
-                'More Options',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+            // DrawerHeader с именем и адресом клиента
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Colors.white),
+              child: _userRole == UserRole.client
+                  ? (_loadingProfile
+                  ? const Center(child: CircularProgressIndicator())
+                  : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_firstName ?? ''} ${_lastName ?? ''}'.trim(),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: TColor.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _address ?? 'No address',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: TColor.textSecondary,
+                    ),
+                  ),
+                ],
+              ))
+                  : const SizedBox.shrink(),
             ),
+            // История
             ListTile(
-              leading: const Icon(Icons.support_agent),
+              leading: const Icon(Icons.history, color: Colors.grey),
+              title: const Text('History'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
+              },
+            ),
+            // My Subscriptions
+            ListTile(
+              leading: const Icon(Icons.repeat, color: Colors.grey),
+              title: const Text('My Subscriptions'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SubscriptionsScreen()),
+                );
+              },
+            ),
+            // About Us
+            ListTile(
+              leading: const Icon(Icons.info_outline, color: Colors.grey),
+              title: const Text('About Us'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AboutUsScreen()),
+                );
+              },
+            ),
+            // Support
+            ListTile(
+              leading: const Icon(Icons.support_agent, color: Colors.grey),
               title: const Text('Support'),
               onTap: () {
                 Navigator.pop(context);
@@ -124,19 +218,37 @@ class _MainTabPageState extends State<MainTabPage> {
           ],
         ),
       ),
-      appBar: _selectedIndex == 2
+
+      appBar: (_selectedIndex == 2)
           ? null
           : AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        title: Text(
-          labels[_selectedIndex],
-          style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: TColor.primaryText),
-        ),
+        // Если клиент и вкладка Home или Orders, показываем адрес
+        title: _userRole == UserRole.client &&
+            (_selectedIndex == 0 || _selectedIndex == 1)
+            ? Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_on,
+                color: TColor.primary, size: 14),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                _address ?? '',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: TColor.textPrimary,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        )
+            : const SizedBox.shrink(),
         centerTitle: true,
-        iconTheme: IconThemeData(color: TColor.primaryText),
+        iconTheme: IconThemeData(color: TColor.primary),
         actions: [
           IconButton(
             onPressed: () async {
@@ -149,34 +261,49 @@ class _MainTabPageState extends State<MainTabPage> {
             },
             icon: badges.Badge(
               showBadge: _unread > 0,
-              badgeContent: Text(
-                '$_unread',
-                style: const TextStyle(
-                    fontSize: 10, color: Colors.white),
+              badgeContent: const SizedBox.shrink(), // без цифр
+              badgeStyle: badges.BadgeStyle(
+                badgeColor: Colors.yellow, // жёлтая «точка»
+                padding: const EdgeInsets.all(4),
+                elevation: 0,
               ),
-              child: const Icon(Icons.notifications_none_rounded),
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: TColor.primary,
+              ),
             ),
           ),
         ],
       ),
+
       body: pages[_selectedIndex],
+
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        backgroundColor: TColor.primary,
-        selectedItemColor: TColor.primaryText,
-        unselectedItemColor: TColor.secondaryText,
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.black, // иконка выбранной вкладки – чёрная
+        unselectedItemColor: TColor.textSecondary,
         currentIndex: _selectedIndex,
         onTap: (i) => setState(() => _selectedIndex = i),
         items: List.generate(icons.length, (i) {
-          final sel = _selectedIndex == i;
+          final isSelected = (_selectedIndex == i);
           return BottomNavigationBarItem(
-            icon: Image.asset(
-              icons[i],
-              width: 24,
-              height: 24,
-              color: sel ? TColor.primaryText : TColor.secondaryText,
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: isSelected
+                  ? BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.yellow, // выделение жёлтым
+              )
+                  : null,
+              child: Image.asset(
+                icons[i],
+                width: 24,
+                height: 24,
+                color: isSelected ? Colors.black : TColor.textSecondary,
+              ),
             ),
-            label: labels[i],
+            label: '',
           );
         }),
       ),

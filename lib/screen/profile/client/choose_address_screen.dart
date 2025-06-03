@@ -21,9 +21,11 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
   Future<void> _searchAddress() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
-    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1');
+    final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1');
 
-    final response = await http.get(url, headers: {'User-Agent': 'Flutter UyTaza App'});
+    final response = await http
+        .get(url, headers: {'User-Agent': 'Flutter UyTaza App'});
 
     if (response.statusCode == 200) {
       final List results = json.decode(response.body);
@@ -48,15 +50,19 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
   }
 
   void _showMessage(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.bg,
+      backgroundColor: TColor.background,
       appBar: AppBar(
-        title: const Text("Choose Address", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Choose Address",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: TColor.primary,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -75,8 +81,11 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
                       filled: true,
                       fillColor: Colors.white,
                       prefixIcon: const Icon(Icons.search),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding:
+                      const EdgeInsets.symmetric(vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -85,7 +94,9 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
                   onPressed: _searchAddress,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: TColor.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Icon(Icons.arrow_forward, color: Colors.white),
                 ),
@@ -111,7 +122,11 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
                         width: 40,
                         height: 40,
                         point: _selectedLocation!,
-                        child: const Icon(Icons.location_pin, size: 40, color: Colors.red),
+                        child: Icon(
+                          Icons.location_pin,
+                          size: 40,
+                          color: TColor.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -134,9 +149,14 @@ class _ChooseAddressScreenState extends State<ChooseAddressScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: TColor.primary,
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text("Save Address", style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      "Save Address",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),

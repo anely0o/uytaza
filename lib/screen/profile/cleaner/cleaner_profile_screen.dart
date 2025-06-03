@@ -43,7 +43,8 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
         firstNameController.text = data['FirstName'] ?? data['first_name'] ?? '';
         lastNameController.text = data['LastName'] ?? data['last_name'] ?? '';
         emailController.text = data['Email'] ?? data['email'] ?? '';
-        phoneController.text = data['PhoneNumber'] ?? data['phone_number'] ?? '';
+        phoneController.text =
+            data['PhoneNumber'] ?? data['phone_number'] ?? '';
       } else {
         _error = 'Ошибка загрузки профиля';
       }
@@ -52,7 +53,6 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
         final ratingData = jsonDecode(ratingRes.body);
         rating = double.tryParse(ratingData['rating'].toString()) ?? 0.0;
       }
-
     } catch (e) {
       _error = 'Ошибка: $e';
     }
@@ -90,7 +90,9 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: TColor.primary,
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 
@@ -98,7 +100,10 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
       return Scaffold(
         backgroundColor: TColor.primary,
         body: Center(
-          child: Text(_error!, style: const TextStyle(color: Colors.white)),
+          child: Text(
+            _error!,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
@@ -110,15 +115,17 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           _buildHeader(),
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
                 ),
+                boxShadow: TColor.softShadow,
               ),
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 children: [
                   _buildInfoTile(
                     icon: Icons.email,
@@ -156,7 +163,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
                 const Expanded(
                   child: Center(
                     child: Text(
-                      "Cleaner Profile",
+                      "",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -170,7 +177,8 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const SettingsScreen()),
                     );
                   },
                 ),
@@ -198,7 +206,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
             children: List.generate(5, (index) {
               return Icon(
                 index < rating.round() ? Icons.star : Icons.star_border,
-                color: Colors.orange,
+                color: TColor.accent,
                 size: 20,
               );
             }),
@@ -214,7 +222,6 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     );
   }
 
-
   Widget _buildInfoTile({
     required IconData icon,
     required String title,
@@ -223,12 +230,18 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     required String fieldKey,
   }) {
     return ListTile(
-      leading: Icon(icon, color: TColor.secondary),
-      title: Text(title,
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle,
-          style: TextStyle(color: TColor.secondaryText)),
+      leading: Icon(icon, color: TColor.primary),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: TColor.textSecondary),
+      ),
       trailing: IconButton(
         icon: Icon(Icons.edit, color: TColor.primary),
         onPressed: () => _editFieldDialog(title, controller, fieldKey),
@@ -238,15 +251,19 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
 
   Widget _buildRatingTile() {
     return ListTile(
-      leading: Icon(Icons.star, color: TColor.secondary),
-      title: Text("Rating",
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
+      leading: Icon(Icons.star, color: TColor.primary),
+      title: Text(
+        "Rating",
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       subtitle: Row(
         children: List.generate(5, (index) {
           return Icon(
             index < rating.round() ? Icons.star : Icons.star_border,
-            color: Colors.orange,
+            color: TColor.accent,
             size: 20,
           );
         }),
@@ -262,11 +279,15 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           MaterialPageRoute(builder: (_) => const CleanerOrdersScreen()),
         );
       },
-      leading: Icon(Icons.list_alt, color: TColor.secondary),
-      title: Text("Assigned Orders",
-          style: TextStyle(
-              color: TColor.primaryText, fontWeight: FontWeight.bold)),
-      trailing: const Icon(Icons.chevron_right),
+      leading: Icon(Icons.list_alt, color: TColor.primary),
+      title: Text(
+        "Assigned Orders",
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      trailing: Icon(Icons.chevron_right, color: TColor.textPrimary),
     );
   }
 
@@ -290,6 +311,9 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
               _updateField(key, controller.text);
               Navigator.pop(context);
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TColor.primary,
+            ),
             child: const Text("Save"),
           ),
         ],

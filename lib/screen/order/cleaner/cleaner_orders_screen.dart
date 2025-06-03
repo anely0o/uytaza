@@ -48,12 +48,13 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
     return Scaffold(
       backgroundColor: TColor.background,
       appBar: AppBar(
-        backgroundColor: TColor.card,
-        elevation: 1,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
         centerTitle: true,
+        iconTheme: IconThemeData(color: TColor.primary),
         title: Text('My Orders',
             style: TextStyle(
-                color: TColor.primaryText, fontWeight: FontWeight.bold)),
+                color: TColor.textPrimary, fontWeight: FontWeight.bold)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -64,7 +65,8 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         child: ListView.separated(
           padding: const EdgeInsets.all(20),
           itemCount: _orders.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 14),
+          separatorBuilder: (_, __) =>
+          const SizedBox(height: 14),
           itemBuilder: (_, i) => _orderCard(_orders[i]),
         ),
       ),
@@ -81,7 +83,9 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         ? DateFormat('dd MMM yyyy, HH:mm').format(startTime.toLocal())
         : '';
     final client = order['client'] ?? {};
-    final clientName = (client['first_name'] ?? '') + ' ' + (client['last_name'] ?? '');
+    final clientName = (client['first_name'] ?? '') +
+        ' ' +
+        (client['last_name'] ?? '');
     final rating = client['rating']?.toDouble() ?? 0.0;
 
     return Container(
@@ -91,42 +95,53 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: TColor.softShadow,
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(clientName,
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: TColor.primaryText)),
-        const SizedBox(height: 4),
-        Row(children: _buildStars(rating)),
-        const SizedBox(height: 6),
-        Text(address,
-            style: TextStyle(fontSize: 15, color: TColor.primaryText)),
-        const SizedBox(height: 6),
-        Text('Start: $fmtTime',
-            style: TextStyle(color: TColor.secondaryText, fontSize: 14)),
-        const SizedBox(height: 6),
-        Chip(
-          backgroundColor:
-          status == 'finished' ? Colors.green[100] : Colors.orange[100],
-          label: Text(status,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(clientName,
               style: TextStyle(
-                  color: status == 'finished' ? Colors.green : Colors.orange)),
-        ),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            child: const Text('Details'),
-            onPressed: () async {
-              final changed = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => OrderDetailsScreen(orderId: id)),
-              );
-              if (changed == true) _fetchOrders();
-            },
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: TColor.textPrimary)),
+          const SizedBox(height: 4),
+          Row(children: _buildStars(rating)),
+          const SizedBox(height: 6),
+          Text(address,
+              style:
+              TextStyle(fontSize: 15, color: TColor.textPrimary)),
+          const SizedBox(height: 6),
+          Text('Start: $fmtTime',
+              style:
+              TextStyle(color: TColor.textSecondary, fontSize: 14)),
+          const SizedBox(height: 6),
+          Chip(
+            backgroundColor: status == 'finished'
+                ? Colors.green[100]
+                : Colors.orange[100],
+            label: Text(status,
+                style: TextStyle(
+                    color: status == 'finished'
+                        ? Colors.green
+                        : Colors.orange)),
           ),
-        )
-      ]),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              child: const Text('Details'),
+              onPressed: () async {
+                final changed = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          OrderDetailsScreen(orderId: id)),
+                );
+                if (changed == true) _fetchOrders();
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -138,9 +153,11 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
     for (int i = 0; i < full; i++) {
       stars.add(const Icon(Icons.star, color: Colors.amber, size: 18));
     }
-    if (hasHalf) stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 18));
+    if (hasHalf)
+      stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 18));
     while (stars.length < total) {
-      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 18));
+      stars.add(const Icon(Icons.star_border,
+          color: Colors.amber, size: 18));
     }
     return stars;
   }

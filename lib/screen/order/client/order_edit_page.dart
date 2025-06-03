@@ -2,14 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/screen/models/order_model.dart';
 import 'package:uytaza/api/api_service.dart';
+import 'package:uytaza/api/api_routes.dart';
 
 class OrderEditPage extends StatefulWidget {
   final String orderId;
   const OrderEditPage({super.key, required this.orderId});
-
 
   @override
   State<OrderEditPage> createState() => _OrderEditPageState();
@@ -27,7 +26,9 @@ class _OrderEditPageState extends State<OrderEditPage> {
 
   Future<void> _load() async {
     try {
-      final res = await ApiService.getWithToken('${ApiRoutes.orders}/${widget.orderId}');
+      final res = await ApiService.getWithToken(
+        '${ApiRoutes.orders}/${widget.orderId}',
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final order = Order.fromJson(data);
@@ -66,13 +67,18 @@ class _OrderEditPageState extends State<OrderEditPage> {
         '${ApiRoutes.orders}/${widget.orderId}',
         body,
       );
-      if (r.statusCode == 200) Navigator.pop(context, true);
-      else throw 'HTTP ${r.statusCode}';
+      if (r.statusCode == 200) {
+        Navigator.pop(context, true);
+      } else {
+        throw 'HTTP ${r.statusCode}';
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Failed to save: $e'),
-        backgroundColor: Colors.red,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -87,21 +93,35 @@ class _OrderEditPageState extends State<OrderEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: TColor.background,
       appBar: AppBar(
-        title: const Text('Edit Order'),
-        backgroundColor: TColor.primary,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: Text(
+          'Edit Order',
+          style: TextStyle(
+            color: TColor.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        iconTheme: IconThemeData(color: TColor.primary),
         actions: [
           IconButton(
-            onPressed: _saving ? null : _save,
-            icon: const Icon(Icons.save),
+            onPressed: (_saving || _loading) ? null : _save,
+            icon: Icon(Icons.save, color: TColor.primary),
           ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Text(_error!))
-          : _formContent(),
+          : (_error != null
+          ? Center(
+        child: Text(
+          _error!,
+          style: TextStyle(color: TColor.textSecondary),
+        ),
+      )
+          : _formContent()),
     );
   }
 
@@ -115,12 +135,30 @@ class _OrderEditPageState extends State<OrderEditPage> {
         const SizedBox(height: 20),
         TextField(
           controller: _addrCtl,
-          decoration: const InputDecoration(labelText: 'Address'),
+          decoration: InputDecoration(
+            labelText: 'Address',
+            labelStyle: TextStyle(color: TColor.textSecondary),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: TColor.divider),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: TColor.primary),
+            ),
+          ),
         ),
         const SizedBox(height: 10),
         TextField(
           controller: _noteCtl,
-          decoration: const InputDecoration(labelText: 'Comment'),
+          decoration: InputDecoration(
+            labelText: 'Comment',
+            labelStyle: TextStyle(color: TColor.textSecondary),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: TColor.divider),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: TColor.primary),
+            ),
+          ),
           maxLines: 3,
         ),
       ],
@@ -129,7 +167,13 @@ class _OrderEditPageState extends State<OrderEditPage> {
 
   Widget _dateRow(BuildContext ctx) => Row(
     children: [
-      const Text('Date:', style: TextStyle(fontWeight: FontWeight.w600)),
+      Text(
+        'Date:',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: TColor.textPrimary,
+        ),
+      ),
       const SizedBox(width: 8),
       TextButton(
         onPressed: () async {
@@ -141,14 +185,23 @@ class _OrderEditPageState extends State<OrderEditPage> {
           );
           if (picked != null) setState(() => _date = picked);
         },
-        child: Text(DateFormat('dd.MM.yyyy').format(_date)),
+        child: Text(
+          DateFormat('dd.MM.yyyy').format(_date),
+          style: TextStyle(color: TColor.primary),
+        ),
       ),
     ],
   );
 
   Widget _timeRow(BuildContext ctx) => Row(
     children: [
-      const Text('Time:', style: TextStyle(fontWeight: FontWeight.w600)),
+      Text(
+        'Time:',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: TColor.textPrimary,
+        ),
+      ),
       const SizedBox(width: 8),
       TextButton(
         onPressed: () async {
@@ -158,7 +211,10 @@ class _OrderEditPageState extends State<OrderEditPage> {
           );
           if (picked != null) setState(() => _time = picked);
         },
-        child: Text(_time.format(ctx)),
+        child: Text(
+          _time.format(ctx),
+          style: TextStyle(color: TColor.primary),
+        ),
       ),
     ],
   );

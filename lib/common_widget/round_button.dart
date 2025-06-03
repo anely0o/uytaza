@@ -5,11 +5,20 @@ enum RoundButtonType { primary, secondary, line }
 
 class RoundButton extends StatelessWidget {
   final String title;
+
+  /// If you explicitly pass a backgroundColor, it will override the type-based default.
+  final Color? backgroundColor;
+
+  /// If you explicitly pass a textColor, it will override the type-based default.
+  final Color? textColor;
+
+  /// Only used if [type] == RoundButtonType.line
+  final Color? lineColor;
+
   final RoundButtonType type;
   final double height;
   final double fontSize;
   final FontWeight fontWeight;
-  final Color? lineColor;
   final double width;
   final double radius;
   final VoidCallback onPressed;
@@ -18,17 +27,44 @@ class RoundButton extends StatelessWidget {
     super.key,
     required this.title,
     this.type = RoundButtonType.primary,
+    this.backgroundColor,
+    this.textColor,
+    this.lineColor,
     this.height = 60,
     this.fontSize = 17,
     this.fontWeight = FontWeight.normal,
     this.width = double.maxFinite,
-    this.lineColor,
     this.radius = 30,
     required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Determine default background + text colors based on `type`
+    Color defaultBackground;
+    Color defaultText;
+    BorderSide? borderSide;
+
+    switch (type) {
+      case RoundButtonType.primary:
+        defaultBackground = TColor.primary;
+        defaultText = Colors.white;
+        break;
+      case RoundButtonType.secondary:
+        defaultBackground = TColor.accent; // rare yellow
+        defaultText = Colors.white;
+        break;
+      case RoundButtonType.line:
+        defaultBackground = Colors.transparent;
+        defaultText = lineColor ?? TColor.primary;
+        borderSide = BorderSide(color: lineColor ?? TColor.primary, width: 2);
+        break;
+    }
+
+    // If the user passed explicit backgroundColor / textColor, use those instead
+    final Color finalBg = backgroundColor ?? defaultBackground;
+    final Color finalText = textColor ?? defaultText;
+
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(radius),
@@ -37,16 +73,8 @@ class RoundButton extends StatelessWidget {
         width: width,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color:
-          type == RoundButtonType.primary
-              ? TColor.primary
-              : type == RoundButtonType.secondary
-              ? TColor.secondary
-              : Colors.transparent,
-          border:
-          type == RoundButtonType.line
-              ? Border.all(color: lineColor ?? TColor.secondary, width: 2)
-              : null,
+          color: finalBg,
+          border: borderSide != null ? Border.fromBorderSide(borderSide) : null,
           borderRadius: BorderRadius.circular(radius),
         ),
         height: height,
@@ -54,10 +82,7 @@ class RoundButton extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color:
-            type == RoundButtonType.line
-                ? (lineColor ?? TColor.primaryText)
-                : Colors.white,
+            color: finalText,
             fontSize: fontSize,
             fontWeight: fontWeight,
           ),

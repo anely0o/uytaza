@@ -23,9 +23,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, spreadRadius: 4),
-        ],
+        boxShadow: TColor.softShadow,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -33,7 +31,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
           Text(
             "Image Picker",
             style: TextStyle(
-              color: TColor.primaryText,
+              color: TColor.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -45,12 +43,12 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
               Expanded(
                 child: TextButton(
                   onPressed: () {
-                    getImageCamera();
+                    _getImageCamera();
                   },
                   child: Icon(
                     Icons.camera_alt,
                     size: 100,
-                    color: TColor.primaryText,
+                    color: TColor.primary,
                   ),
                 ),
               ),
@@ -58,12 +56,12 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
               Expanded(
                 child: TextButton(
                   onPressed: () {
-                    getImageGallery();
+                    _getImageGallery();
                   },
                   child: Icon(
                     Icons.image,
                     size: 100,
-                    color: TColor.primaryText,
+                    color: TColor.primary,
                   ),
                 ),
               ),
@@ -76,7 +74,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                   "Take Photo",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: TColor.primaryText,
+                    color: TColor.textPrimary,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
@@ -88,7 +86,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                   "Gallery",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: TColor.primaryText,
+                    color: TColor.textPrimary,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
@@ -104,11 +102,11 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                 onPressed: () {
                   context.pop();
                 },
-                child: const Text(
+                child: Text(
                   "Close",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.red,
+                    color: TColor.primary,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
@@ -121,7 +119,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
     );
   }
 
-  Future getImageCamera() async {
+  Future<void> _getImageCamera() async {
     try {
       final pickedFile = await picker.pickImage(source: ImageSource.camera);
       if (pickedFile != null) {
@@ -133,7 +131,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
     }
   }
 
-  Future getImageGallery() async {
+  Future<void> _getImageGallery() async {
     try {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {

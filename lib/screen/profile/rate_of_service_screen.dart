@@ -31,17 +31,21 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
 
   Future<void> _loadData() async {
     try {
-      final profileRes = await ApiService.getWithToken('/api/auth/profile');
+      final profileRes =
+      await ApiService.getWithToken('/api/auth/profile');
       final ratingRes = await ApiService.getWithToken('/rating');
       final reviewRes = await ApiService.getWithToken('/reviews/me');
 
       if (profileRes.statusCode == 200) {
         final data = jsonDecode(profileRes.body);
-        name = '${data["FirstName"] ?? data["first_name"] ?? ''} ${data["LastName"] ?? data["last_name"] ?? ''}'.trim();
+        name =
+            '${data["FirstName"] ?? data["first_name"] ?? ''} ${data["LastName"] ?? data["last_name"] ?? ''}'
+                .trim();
         phone = data["PhoneNumber"] ?? data["phone_number"] ?? '';
         email = data["Email"] ?? data["email"] ?? '';
         totalJobs = data["JobsDone"] ?? 0;
-        yearsExperience = (data["ExperienceYears"] ?? 0).toDouble();
+        yearsExperience =
+            (data["ExperienceYears"] ?? 0).toDouble();
       }
 
       if (ratingRes.statusCode == 200) {
@@ -53,7 +57,7 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
         reviews = jsonDecode(reviewRes.body);
       }
     } catch (e) {
-      print("Error loading profile/rating/reviews: $e");
+      // You can log or show an error if desired
     }
 
     setState(() => _loading = false);
@@ -70,13 +74,16 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: TColor.primary,
-        elevation: 0,
-        centerTitle: false,
+        backgroundColor: Colors.white, // neutral navbar
+        elevation: 0.5,
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: Icon(Icons.arrow_back, color: TColor.primary),
+        ),
         title: Text(
           "Rate for Service",
           style: TextStyle(
-            color: TColor.primaryText,
+            color: TColor.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -98,7 +105,10 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
     return Stack(
       alignment: Alignment.topCenter,
       children: [
-        Container(height: context.width * 0.5, color: TColor.primary),
+        Container(
+          height: context.width * 0.5,
+          color: TColor.primary,
+        ),
         Padding(
           padding: EdgeInsets.only(top: context.width * 0.2),
           child: Container(
@@ -107,9 +117,7 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 2)),
-              ],
+              boxShadow: TColor.softShadow,
             ),
             child: Column(
               children: [
@@ -117,24 +125,38 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.star, color: TColor.primary, size: 25),
+                    Icon(Icons.star,
+                        color: TColor.accent, size: 25),
                     const SizedBox(width: 8),
-                    Text(rating.toStringAsFixed(1),
-                        style: TextStyle(color: TColor.secondaryText, fontSize: 17)),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: TextStyle(
+                          color: TColor.textSecondary,
+                          fontSize: 17),
+                    ),
                   ],
                 ),
-                Text(name,
-                    style: TextStyle(
-                        color: TColor.primaryText,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold)),
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: TColor.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 15),
                 const Divider(height: 1),
                 Row(
                   children: [
-                    _buildStatItem(totalJobs.toString(), "Total Jobs"),
-                    Container(width: 1, height: 60, color: Colors.black12),
-                    _buildStatItem(yearsExperience.toStringAsFixed(1), "Years"),
+                    _buildStatItem(
+                        totalJobs.toString(), "Total Jobs"),
+                    Container(
+                      width: 1,
+                      height: 60,
+                      color: Colors.black12,
+                    ),
+                    _buildStatItem(yearsExperience.toStringAsFixed(1),
+                        "Years"),
                   ],
                 ),
               ],
@@ -147,8 +169,12 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
             radius: context.width * 0.15,
             backgroundColor: Colors.white,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(context.width * 0.15),
-              child: Image.asset("assets/img/u2.png", fit: BoxFit.cover),
+              borderRadius:
+              BorderRadius.circular(context.width * 0.15),
+              child: Image.asset(
+                "assets/img/u2.png",
+                fit: BoxFit.cover,
+              ),
             ),
           ),
         ),
@@ -160,12 +186,21 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
     return Expanded(
       child: Column(
         children: [
-          Text(value,
-              style: TextStyle(
-                  color: TColor.primaryText,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          Text(label, style: TextStyle(color: TColor.secondaryText, fontSize: 12)),
+          Text(
+            value,
+            style: TextStyle(
+              color: TColor.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: TColor.textSecondary,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -173,7 +208,8 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
 
   Widget _buildPersonalInfo() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      padding: const EdgeInsets.symmetric(
+          horizontal: 20, vertical: 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -183,7 +219,10 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
           Text(
             "Reviews",
             style: TextStyle(
-                color: TColor.primaryText, fontSize: 17, fontWeight: FontWeight.bold),
+              color: TColor.textPrimary,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -193,21 +232,32 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
   Widget _infoBlock(String title, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text("$title: $value",
-          style: TextStyle(color: TColor.secondaryText, fontSize: 15)),
+      child: Text(
+        "$title: $value",
+        style: TextStyle(
+          color: TColor.textSecondary,
+          fontSize: 15,
+        ),
+      ),
     );
   }
 
   Widget _buildReviews() {
     return Column(
       children: reviews.map((r) {
-        final name = r['reviewer_name'] ?? 'Anonymous';
+        final reviewerName = r['reviewer_name'] ?? 'Anonymous';
         final comment = r['comment'] ?? '';
         final stars = (r['rating'] ?? 0).toDouble();
 
         return ListTile(
-          leading: const CircleAvatar(child: Icon(Icons.person)),
-          title: Text(name, style: TextStyle(color: TColor.primaryText)),
+          leading: const CircleAvatar(
+            backgroundColor: Colors.grey,
+            child: Icon(Icons.person, color: Colors.white),
+          ),
+          title: Text(
+            reviewerName,
+            style: TextStyle(color: TColor.textPrimary),
+          ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -220,7 +270,10 @@ class _RateOfServiceScreenState extends State<RateOfServiceScreen> {
                 unratedColor: Colors.black12,
               ),
               const SizedBox(height: 4),
-              Text(comment, style: TextStyle(color: TColor.secondaryText)),
+              Text(
+                comment,
+                style: TextStyle(color: TColor.textSecondary),
+              ),
             ],
           ),
         );

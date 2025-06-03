@@ -8,7 +8,7 @@ import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
 import 'package:uytaza/screen/login/sign_up_screen.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
-import '../../api/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -58,7 +58,6 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           );
         } else {
-          // ⬇️ переходим на главный экран
           Navigator.pushNamedAndRemoveUntil(context, '/main', (_) => false);
         }
       } else {
@@ -125,26 +124,31 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: TColor.background,
       body: Stack(
         alignment: Alignment.center,
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
             child: Column(
               children: [
-                const SizedBox(height: 40),
-                Image.asset('assets/img/logo.png', width: context.width * 0.5),
+                Image.asset('assets/img/logo.png',
+                    width: context.width * 0.5),
                 const SizedBox(height: 20),
                 _buildCard(context),
                 const SizedBox(height: 10),
                 Text('Don\'t have an account?',
-                    style: TextStyle(color: TColor.primaryText)),
+                    style: TextStyle(color: TColor.textPrimary)),
+                const SizedBox(height: 8),
                 RoundButton(
                   title: 'SIGN UP',
                   width: context.width * 0.65,
                   type: RoundButtonType.line,
+                  textColor: TColor.primary,
+                  lineColor: TColor.primary,
                   onPressed: () => context.push(const SignUpScreen()),
                 ),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -158,7 +162,7 @@ class _SignInScreenState extends State<SignInScreen> {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(25),
-      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      boxShadow: TColor.softShadow,
     ),
     child: Column(
       children: [
@@ -179,9 +183,8 @@ class _SignInScreenState extends State<SignInScreen> {
           obscureText: !isPasswordVisible,
           controller: txtPassword,
           right: IconButton(
-            onPressed: () => setState(() {
-              isPasswordVisible = !isPasswordVisible;
-            }),
+            onPressed: () =>
+                setState(() => isPasswordVisible = !isPasswordVisible),
             icon: Icon(
               isPasswordVisible ? Icons.visibility : Icons.visibility_off,
               color: TColor.primary,
@@ -193,19 +196,22 @@ class _SignInScreenState extends State<SignInScreen> {
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: _handleForgotPassword,
-            child: const Text('Forgot Password?',
-                style:
-                TextStyle(color: Colors.blue, fontWeight: FontWeight.w500)),
+            child: Text('Forgot Password?',
+                style: TextStyle(
+                    color: TColor.primary, fontWeight: FontWeight.w500)),
           ),
         ),
         const SizedBox(height: 10),
         RoundButton(
           title: 'SIGN IN',
           fontWeight: FontWeight.bold,
+          backgroundColor: TColor.primary,
+          textColor: Colors.white,
           onPressed: _handleSignIn,
         ),
         const SizedBox(height: 10),
-        Text('Or Sign In with', style: TextStyle(color: TColor.placeholder)),
+        Text('Or Sign In with',
+            style: TextStyle(color: TColor.placeholder)),
         const SizedBox(height: 10),
         InkWell(
           onTap: _handleGoogleSignIn,

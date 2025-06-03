@@ -1,3 +1,5 @@
+// lib/screen/support/new_ticket_screen.dart
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,7 +21,9 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) setState(() => _selectedImage = File(picked.path));
+    if (picked != null) {
+      setState(() => _selectedImage = File(picked.path));
+    }
   }
 
   Future<void> _submit() async {
@@ -34,6 +38,7 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
 
     setState(() => _loading = true);
     try {
+      // 1) Create the ticket
       final ticketRes = await ApiService.postWithToken(
         '/api/support/tickets',
         {'subject': subject},
@@ -43,25 +48,21 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
         throw 'Ticket creation failed (${ticketRes.statusCode})';
       }
 
-      final ticketId = (Map<String, dynamic>.from(
-          await ApiService.decodeJson(ticketRes)))
-      ['id']
-          .toString();
+      final ticketJson = jsonDecode(ticketRes.body) as Map<String, dynamic>;
+      final ticketId = ticketJson['id'].toString();
 
-      final messageBody = {
-        'text': message,
-        'ticket_id': ticketId,
-      };
-
+      // 2) Send the first message under that ticket
+      final messageBody = {'text': message};
       final msgRes = _selectedImage == null
           ? await ApiService.postWithToken(
-          '/api/support/messages', messageBody)
+        '/api/support/tickets/$ticketId/messages',
+        messageBody,
+      )
           : await ApiService.postMultipart(
-        '/api/support/messages',
+        '/api/support/tickets/$ticketId/messages',
         fileField: 'image',
         file: _selectedImage!,
-        fields:
-        messageBody.map((k, v) => MapEntry(k, v.toString())),
+        fields: messageBody.map((k, v) => MapEntry(k, v.toString())),
       );
 
       if (msgRes.statusCode == 200 || msgRes.statusCode == 201) {
@@ -81,51 +82,79 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.secondary,
+      backgroundColor: TColor.background,
       appBar: AppBar(
         title: const Text('New Ticket'),
-        backgroundColor: TColor.primary,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: IconThemeData(color: TColor.primary),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text("Subject", style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            "Subject",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           TextField(
             controller: _subjectController,
             decoration: InputDecoration(
               hintText: 'Enter subject...',
               hintStyle: TextStyle(color: TColor.placeholder),
+              enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: TColor.divider)),
+              focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: TColor.primary)),
             ),
           ),
           const SizedBox(height: 20),
-          const Text("Message", style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            "Message",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           TextField(
             controller: _messageController,
             maxLines: 6,
             decoration: InputDecoration(
               hintText: 'Describe your issue...',
               hintStyle: TextStyle(color: TColor.placeholder),
+              border: OutlineInputBorder(
+                borderSide: BorderSide(color: TColor.divider),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           const SizedBox(height: 20),
           Row(children: [
             ElevatedButton.icon(
               onPressed: _pickImage,
-              icon: const Icon(Icons.image),
+              icon: Icon(Icons.image, color: Colors.white),
               label: const Text("Attach Image"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TColor.primary,
+              ),
             ),
             const SizedBox(width: 12),
             if (_selectedImage != null)
-              const Text("Image selected", style: TextStyle(fontSize: 13)),
+              Text("Image selected",
+                  style:
+                  TextStyle(fontSize: 13, color: TColor.primary)),
           ]),
           const SizedBox(height: 30),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _loading ? null : _submit,
-              style: ElevatedButton.styleFrom(backgroundColor: TColor.primary),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: TColor.primary),
               child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
+                  ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ))
                   : const Text("Submit Ticket"),
             ),
           )

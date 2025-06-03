@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
+import 'package:uytaza/common/color_extension.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -23,13 +23,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _load() async {
+    setState(() => _loading = true);
     try {
+      // GET /api/notifications
       final res = await ApiService.getWithToken('/api/notifications');
       if (res.statusCode == 200) {
         final List<dynamic> decoded = jsonDecode(res.body);
         _items = decoded.whereType<Map<String, dynamic>>().toList();
       }
     } catch (_) {
+      // игнорируем ошибки сети
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -37,15 +40,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _markAsRead(String id) async {
     try {
+      // PUT /api/notifications/:id/read
       await ApiService.putWithToken('/api/notifications/$id/read', {});
     } catch (_) {
-      // ignore
+      // игнорируем
     }
   }
 
   void _onTapNotification(Map<String, dynamic> notif) async {
-    if (!(notif['read'] as bool? ?? false)) {
-      await _markAsRead(notif['id']);
+    final isRead = (notif['read'] as bool?) ?? false;
+    if (!isRead) {
+      await _markAsRead(notif['id'].toString());
       setState(() {
         notif['read'] = true;
       });
@@ -76,12 +81,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       backgroundColor: TColor.background,
       appBar: AppBar(
         title: const Text('Notifications'),
-        backgroundColor: TColor.primary,
-        elevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: IconThemeData(color: TColor.primary),
         actions: [
+          // Переключатель "показывать прочитанные / только непрочитанные"
           Switch(
             value: _showRead,
-            activeColor: Colors.white,
+            activeColor: TColor.primary,
             onChanged: (val) => setState(() => _showRead = val),
           )
         ],
@@ -93,12 +100,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           : ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: filteredItems.length,
-        separatorBuilder: (_, __) =>
-        const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, i) {
           final n = filteredItems[i];
           final isRead = (n['read'] as bool?) ?? false;
 
+          // Форматирование времени
           String formattedTime = '';
           final createdAt = n['created_at'] as String?;
           if (createdAt != null) {
@@ -113,15 +120,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             onTap: () => _onTapNotification(n),
             child: Container(
               decoration: BoxDecoration(
-                color: isRead ? Colors.white : TColor.card,
+                color: isRead
+                    ? Colors.white
+                    : TColor.accent.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0F000000),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  )
-                ],
+                boxShadow: TColor.softShadow,
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(
@@ -130,13 +133,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   isRead
                       ? Icons.mark_email_read
                       : Icons.mark_email_unread,
-                  color: isRead ? Colors.grey : TColor.primary,
+                  color: isRead ? TColor.textSecondary : TColor.primary,
                 ),
                 title: Text(
                   n['title']?.toString() ?? 'Notification',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: TColor.primaryText,
+                    color: TColor.textPrimary,
                   ),
                 ),
                 subtitle: Text(
@@ -147,7 +150,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 trailing: Text(
                   formattedTime,
                   style: TextStyle(
-                      color: TColor.secondaryText, fontSize: 12),
+                      color: TColor.textSecondary, fontSize: 12),
                 ),
               ),
             ),

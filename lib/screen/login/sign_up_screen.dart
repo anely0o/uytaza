@@ -5,7 +5,7 @@ import 'package:uytaza/common/extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/common_widget/round_textfield.dart';
 import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
-import '../../api/api_service.dart';
+import 'package:uytaza/api/api_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -39,7 +39,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (response.statusCode == 200) {
         final token = jsonDecode(response.body)['token'];
         await ApiService.saveToken(token);
-        context.push(TemporaryPasswordChangeScreen());
+        context.push(const TemporaryPasswordChangeScreen());
       } else {
         final error = jsonDecode(response.body)['error'];
         ScaffoldMessenger.of(
@@ -56,27 +56,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: TColor.background,
       body: Stack(
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: Image.asset("assets/img/bg.png", fit: BoxFit.cover),
+            child: Container(color: TColor.background),
           ),
           SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
             child: Column(
               children: [
-                const SizedBox(height: 40),
-                Image.asset("assets/img/logo.png", width: context.width * 0.5),
+                Image.asset("assets/img/logo.png",
+                    width: context.width * 0.5),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(25),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 4),
-                    ],
+                    boxShadow: TColor.softShadow,
                   ),
                   child: Column(
                     children: [
@@ -89,17 +88,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      NewRoundTextfield(
+                      RoundTextfield(
                         hintText: "First Name",
                         controller: txtFirstName,
                       ),
                       const SizedBox(height: 10),
-                      NewRoundTextfield(
+                      RoundTextfield(
                         hintText: "Last Name",
                         controller: txtLastName,
                       ),
                       const SizedBox(height: 10),
-                      NewRoundTextfield(
+                      RoundTextfield(
                         hintText: "Email",
                         keyboardType: TextInputType.emailAddress,
                         controller: txtEmail,
@@ -107,6 +106,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(height: 20),
                       RoundButton(
                         title: "SIGN UP",
+                        backgroundColor: TColor.primary,
+                        textColor: Colors.white,
                         fontWeight: FontWeight.bold,
                         onPressed: _handleSignUp,
                       ),
@@ -120,7 +121,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         onTap: () {
                           // TODO: Google Sign-Up
                         },
-                        child: Image.asset("assets/img/google.png", width: 50),
+                        child: Image.asset("assets/img/google.png",
+                            width: 50),
                       ),
                     ],
                   ),
@@ -128,14 +130,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 15),
                 Text(
                   "Already have an account?",
-                  style: TextStyle(color: TColor.primaryText),
+                  style: TextStyle(color: TColor.textPrimary),
                 ),
+                const SizedBox(height: 8),
                 RoundButton(
                   title: "SIGN IN",
                   width: context.width * 0.65,
                   type: RoundButtonType.line,
+                  textColor: TColor.primary,
+                  lineColor: TColor.primary,
                   onPressed: () => context.pop(),
                 ),
+                const SizedBox(height: 40),
               ],
             ),
           ),

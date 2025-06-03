@@ -1,12 +1,10 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common/extension.dart';
+import 'package:uytaza/screen/home/home_screen.dart';
 import 'package:uytaza/screen/login/sign_in_screen.dart';
-import 'package:uytaza/screen/login/temporary_password_change_screen.dart';
-
-import '../home/home_screen.dart';
 import '../../api/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -19,7 +17,6 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
-    // TODO implement init
     super.initState();
     loadView();
   }
@@ -42,9 +39,9 @@ class _SplashScreenState extends State<SplashScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['reset_required'] == true) {
-          context.push(TemporaryPasswordChangeScreen());
+          context.push(const SignInScreen());
         } else {
-          context.push(HomeScreen());
+          context.push(const HomeScreen());
         }
       } else {
         goToAuth();
@@ -52,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       goToAuth();
     }
-  } //chan
+  }
 
   void goToAuth() {
     Navigator.pushAndRemoveUntil(
@@ -62,22 +59,17 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  void goStart() {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const SignInScreen()),
-          (route) => true,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Image.asset(
-        "assets/img/splash.png",
-        width: context.width,
-        height: context.height,
-        fit: BoxFit.cover,
+      backgroundColor: TColor.background,
+      body: Center(
+        child: Image.asset(
+          "assets/img/logo.png",
+          width: 120,
+          height: 120,
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }

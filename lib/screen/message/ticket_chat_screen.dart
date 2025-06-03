@@ -1,3 +1,4 @@
+// lib/screen/support/ticket_chat_screen.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,7 +10,8 @@ class TicketChatScreen extends StatefulWidget {
   final String ticketId;
   final String subject;
 
-  const TicketChatScreen({super.key, required this.ticketId, required this.subject});
+  const TicketChatScreen(
+      {super.key, required this.ticketId, required this.subject});
 
   @override
   State<TicketChatScreen> createState() => _TicketChatScreenState();
@@ -31,6 +33,7 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
 
   Future<void> _loadMessages() async {
     try {
+      // GET all messages for this ticket
       final res = await ApiService.getWithToken('/api/support/tickets/${widget.ticketId}/messages');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as List;
@@ -42,20 +45,18 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
 
   Future<void> _sendMessage() async {
     final msg = _msgController.text.trim();
-    if (msg.isEmpty) return;
+    if (msg.isEmpty && _selectedImage == null) return;
 
     setState(() => _sending = true);
 
-    final body = {
-      'text': msg,
-      'ticket_id': widget.ticketId,
-    };
+    final body = {'text': msg};
 
     try {
       final res = _selectedImage == null
-          ? await ApiService.postWithToken('/api/support/messages', body)
+          ? await ApiService.postWithToken(
+          '/api/support/tickets/${widget.ticketId}/messages', body)
           : await ApiService.postMultipart(
-        '/api/support/messages',
+        '/api/support/tickets/${widget.ticketId}/messages',
         fileField: 'image',
         file: _selectedImage!,
         fields: body.map((k, v) => MapEntry(k, v.toString())),
@@ -69,7 +70,8 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
         throw 'Message send failed (${res.statusCode})';
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       setState(() => _sending = false);
     }
@@ -90,10 +92,12 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.all(12),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+        constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.7),
         decoration: BoxDecoration(
-          color: isClient ? TColor.chatTextBG : TColor.chatTextBG2,
+          color: isClient ? TColor.primary.withOpacity(.9) : TColor.background,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: TColor.softShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +105,8 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
             if (text.isNotEmpty)
               Text(
                 text,
-                style: TextStyle(color: isClient ? Colors.white : TColor.primaryText),
+                style: TextStyle(
+                    color: isClient ? Colors.white : TColor.textPrimary),
               ),
             if (imageUrl != null)
               Padding(
@@ -117,10 +122,14 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.secondary,
+      backgroundColor: TColor.background,
       appBar: AppBar(
-        backgroundColor: TColor.primary,
-        title: Text(widget.subject, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: IconThemeData(color: TColor.primary),
+        title: Text(widget.subject,
+            style: TextStyle(
+                color: TColor.textPrimary, fontWeight: FontWeight.w600)),
       ),
       body: Column(
         children: [
@@ -135,25 +144,43 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).viewInsets.bottom),
+            padding: EdgeInsets.fromLTRB(
+                16, 10, 16, 10 + MediaQuery.of(context).viewInsets.bottom),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.attach_file),
+                  icon: Icon(Icons.attach_file, color: TColor.primary),
                   onPressed: _pickImage,
                 ),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
-                    controller: _msgController,
-                    decoration: InputDecoration(
-                      hintText: 'Type your message...',
-                      hintStyle: TextStyle(color: TColor.placeholder),
+                  child: Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: TColor.softShadow,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _msgController,
+                            decoration: InputDecoration(
+                              hintText: 'Type your message...',
+                              hintStyle: TextStyle(color: TColor.placeholder),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.send, color: TColor.primary),
+                          onPressed: _sending ? null : _sendMessage,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sending ? null : _sendMessage,
                 ),
               ],
             ),

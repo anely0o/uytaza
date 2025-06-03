@@ -1,4 +1,3 @@
-// lib/screen/subscription/subscription_build_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -15,28 +14,25 @@ class SubscriptionBuildPage extends StatefulWidget {
 }
 
 class _SubscriptionBuildPageState extends State<SubscriptionBuildPage> {
-  // ───────── data ─────────
   List<Order> _orders = [];
   String? _selectedOrderId;
-  bool   _orderPreselected = false;
+  bool _orderPreselected = false;
 
   DateTime startDate = DateTime.now();
-  DateTime endDate   = DateTime.now().add(const Duration(days:30));
+  DateTime endDate = DateTime.now().add(const Duration(days: 30));
 
-  final _weekDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  final Set<int> _selectedDays = {1,5};
+  final _weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  final Set<int> _selectedDays = {1, 5};
 
   bool _loading = true, _submitting = false;
-  bool _argsHandled = false;                   // ← новое
+  bool _argsHandled = false;
 
-  // ───────── life-cycle ─────────
   @override
   void initState() {
     super.initState();
     _loadOrders();
   }
 
-  /// здесь контекст уже «смонтирован» – читаем arguments безопасно
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -44,7 +40,7 @@ class _SubscriptionBuildPageState extends State<SubscriptionBuildPage> {
 
     final arg = ModalRoute.of(context)?.settings.arguments;
     if (arg is String && arg.isNotEmpty) {
-      _selectedOrderId  = arg;
+      _selectedOrderId = arg;
       _orderPreselected = true;
     }
     _argsHandled = true;
@@ -61,29 +57,37 @@ class _SubscriptionBuildPageState extends State<SubscriptionBuildPage> {
         throw 'HTTP ${r.statusCode}';
       }
     } catch (e) {
-      _snack('Failed to load orders: $e', err:true);
+      _snack('Failed to load orders: $e', err: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  // ───────── helpers ─────────
-  void _snack(String m,{bool err=false}) =>
+  void _snack(String m, {bool err = false}) =>
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(m), backgroundColor: err?Colors.red:null));
+        SnackBar(
+          content: Text(m),
+          backgroundColor: err ? TColor.accent : null,
+        ),
+      );
 
-  // ───────── submit ─────────
   Future<void> _createSub() async {
-    if (_selectedOrderId == null) { _snack('Choose order', err:true); return; }
-    if (_selectedDays.isEmpty)    { _snack('Select days', err:true); return; }
+    if (_selectedOrderId == null) {
+      _snack('Choose order', err: true);
+      return;
+    }
+    if (_selectedDays.isEmpty) {
+      _snack('Select days', err: true);
+      return;
+    }
 
-    setState(()=>_submitting=true);
+    setState(() => _submitting = true);
     final body = {
-      'order_id'    : _selectedOrderId,
-      'start_date'  : startDate.toUtc().toIso8601String(),
-      'end_date'    : endDate.toUtc().toIso8601String(),
+      'order_id': _selectedOrderId,
+      'start_date': startDate.toUtc().toIso8601String(),
+      'end_date': endDate.toUtc().toIso8601String(),
       'days_of_week': _selectedDays.map((i) => _weekDays[i - 1]).toList(),
-      'price'       : _calcPriceForOrder(),
+      'price': _calcPriceForOrder(),
     };
     try {
       final res = await ApiService.postWithToken(ApiRoutes.subs, body);
@@ -95,42 +99,49 @@ class _SubscriptionBuildPageState extends State<SubscriptionBuildPage> {
         throw m['error'] ?? m['message'] ?? 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _snack('Failed: $e', err:true);
+      _snack('Failed: $e', err: true);
     } finally {
-      if (mounted) setState(()=>_submitting=false);
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
-  // ───────── UI ─────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.primary,
+      backgroundColor: TColor.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: Text(
+          'New Subscription',
+          style: TextStyle(
+            color: TColor.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        iconTheme: IconThemeData(color: TColor.primary),
         centerTitle: true,
-        title: const Text('New Subscription',
-            style: TextStyle(color: Colors.white,fontWeight: FontWeight.w700)),
       ),
-      body: Column(
-        children:[
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
           Expanded(
-            child: _loading
-                ? const Center(child:CircularProgressIndicator(color: Colors.white))
-                : SingleChildScrollView(
+            child: SingleChildScrollView(
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(40))),
+                  color: Colors.white,
+                  borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(40)),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children:[
+                  children: [
                     _orderSection(),
-                    const SizedBox(height:20),
+                    const SizedBox(height: 20),
                     _periodSection(),
-                    const SizedBox(height:20),
+                    const SizedBox(height: 20),
                     _daysSection(),
                   ],
                 ),
@@ -143,34 +154,52 @@ class _SubscriptionBuildPageState extends State<SubscriptionBuildPage> {
     );
   }
 
-  // ───── choose order ─────
   Widget _orderSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
-    children:[
-      const Text('Based on order', style: TextStyle(fontWeight: FontWeight.w600)),
-      const SizedBox(height:8),
-
+    children: [
+      Text('Based on order',
+          style: TextStyle(
+              fontWeight: FontWeight.w600, color: TColor.textPrimary)),
+      const SizedBox(height: 8),
       _orderPreselected
           ? Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical:14,horizontal:16),
+        padding:
+        const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(10)),
-        child: Text(_orderLabel(
-            _orders.firstWhere((o) => o.id == _selectedOrderId,
-                orElse: () => Order.placeholder()))),
+          border: Border.all(color: TColor.divider),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(_orderLabel(_orders.firstWhere(
+                (o) => o.id == _selectedOrderId,
+            orElse: () => Order.placeholder()))),
       )
           : DropdownButtonFormField<String>(
         value: _selectedOrderId,
         isExpanded: true,
         decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-        items: _orders.map((o)=>DropdownMenuItem(
-            value: o.id, child: Text(_orderLabel(o),
-            overflow: TextOverflow.ellipsis))).toList(),
-        onChanged: (v)=>setState(()=>_selectedOrderId=v),
-        hint: const Text('Select order'),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: TColor.divider),
+          ),
+        ),
+        items: _orders
+            .map(
+              (o) => DropdownMenuItem(
+            value: o.id,
+            child: Text(
+              _orderLabel(o),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: TColor.textPrimary),
+            ),
+          ),
+        )
+            .toList(),
+        onChanged: (v) => setState(() => _selectedOrderId = v),
+        hint: Text(
+          'Select order',
+          style: TextStyle(color: TColor.textSecondary),
+        ),
       ),
     ],
   );
@@ -178,99 +207,102 @@ class _SubscriptionBuildPageState extends State<SubscriptionBuildPage> {
   String _orderLabel(Order o) =>
       '${DateFormat('dd.MM').format(o.scheduledAt)} – ${o.address}';
 
-  // ───── period ─────
   Widget _periodSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
-    children:[
+    children: [
       const Text('Period', style: TextStyle(fontWeight: FontWeight.w600)),
-      const SizedBox(height:10),
-      Row(children:[
-        Expanded(child:_dateBox('Start', startDate, (d)=>setState(()=>startDate=d))),
-        const SizedBox(width:10),
-        Expanded(child:_dateBox('End',   endDate,   (d)=>setState(()=>endDate=d))),
-      ]),
+      const SizedBox(height: 10),
+      Row(
+        children: [
+          Expanded(child: _dateBox('Start', startDate, (d) => setState(() => startDate = d))),
+          const SizedBox(width: 10),
+          Expanded(child: _dateBox('End', endDate, (d) => setState(() => endDate = d))),
+        ],
+      ),
     ],
   );
 
-  Widget _dateBox(String label, DateTime v, ValueChanged<DateTime> onPick)
-  => GestureDetector(
-    onTap: () async {
-      final p = await showDatePicker(
-          context: context,
-          initialDate: v,
-          firstDate : DateTime.now(),
-          lastDate  : DateTime.now().add(const Duration(days:365)));
-      if (p!=null) onPick(p);
-    },
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical:14,horizontal:16),
-      decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade400),
-          borderRadius: BorderRadius.circular(10)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children:[
-          Text(label, style: const TextStyle(fontSize:12,color: Colors.grey)),
-          const SizedBox(height:4),
-          Text(DateFormat('dd.MM.yyyy').format(v),
-              style: const TextStyle(fontSize:16)),
-        ],
-      ),
-    ),
-  );
+  Widget _dateBox(String label, DateTime v, ValueChanged<DateTime> onPick) =>
+      GestureDetector(
+        onTap: () async {
+          final p = await showDatePicker(
+            context: context,
+            initialDate: v,
+            firstDate: DateTime.now(),
+            lastDate: DateTime.now().add(const Duration(days: 365)),
+          );
+          if (p != null) onPick(p);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: TColor.divider),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(fontSize: 12, color: TColor.textSecondary)),
+              const SizedBox(height: 4),
+              Text(DateFormat('dd.MM.yyyy').format(v),
+                  style: TextStyle(fontSize: 16, color: TColor.textPrimary)),
+            ],
+          ),
+        ),
+      );
 
-  // ───── days ─────
   Widget _daysSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
-    children:[
+    children: [
       const Text('Days of week', style: TextStyle(fontWeight: FontWeight.w600)),
-      const SizedBox(height:10),
+      const SizedBox(height: 10),
       Wrap(
-        spacing:6,
-        children: List.generate(7,(i){
-          final sel = _selectedDays.contains(i+1);
+        spacing: 6,
+        children: List.generate(7, (i) {
+          final sel = _selectedDays.contains(i + 1);
           return FilterChip(
-            label: Text(_weekDays[i]),
+            label: Text(
+              _weekDays[i],
+              style: TextStyle(color: sel ? Colors.white : TColor.textPrimary),
+            ),
             selected: sel,
-            onSelected: (_)=>setState(()=>!_selectedDays.add(i+1)
-                ? _selectedDays.remove(i+1)
-                : null),
-            selectedColor: TColor.secondary,
-            labelStyle: TextStyle(color: sel?Colors.white:Colors.black),
+            onSelected: (_) => setState(() {
+              if (_selectedDays.contains(i + 1)) {
+                _selectedDays.remove(i + 1);
+              } else {
+                _selectedDays.add(i + 1);
+              }
+            }),
+            selectedColor: TColor.primary,
+            checkmarkColor: Colors.white,
+            backgroundColor: TColor.background,
           );
         }),
       ),
     ],
   );
 
-  // ───── submit button ─────
   Widget _submitBtn() => Container(
     color: Colors.white,
     padding: const EdgeInsets.all(16),
     child: ElevatedButton(
-      onPressed: _submitting?null:_createSub,
+      onPressed: _submitting ? null : _createSub,
       style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-          backgroundColor: TColor.primary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        minimumSize: const Size.fromHeight(50),
+        backgroundColor: TColor.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
       child: _submitting
           ? const CircularProgressIndicator(color: Colors.white)
-          : const Text('Create Subscription',
-          style: TextStyle(color: Colors.white,
-              fontSize:16,fontWeight:FontWeight.bold)),
+          : const Text(
+        'Create Subscription',
+        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+      ),
     ),
   );
+
   double _calcPriceForOrder() {
-    // если список заказов уже загружен – берём price из выбранного
-    final order = _orders.firstWhere(
-            (o) => o.id == _selectedOrderId,
-        orElse: () => Order.placeholder());
-
-    if (order.price != null) return order.price!;
-
-
-    // иначе хотя бы 0, чтобы пройти валидацию
-    return 0;
+    final order = _orders.firstWhere((o) => o.id == _selectedOrderId, orElse: () => Order.placeholder());
+    return order.price ?? 0;
   }
-
 }

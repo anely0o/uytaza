@@ -21,21 +21,31 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
   bool _loading = false;
 
   // Полные и краткие названия дней
-  final _fullWeek  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  final _shortWeek = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  final _fullWeek = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+  ];
+  final _shortWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   @override
   void initState() {
     super.initState();
     _start = widget.subscription.start;
-    _end   = widget.subscription.end;
-    _days  = widget.subscription.days.toSet();
+    _end = widget.subscription.end;
+    _days = widget.subscription.days.toSet();
   }
 
   void _snack(String msg, {bool err = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg),
-          backgroundColor: err ? Colors.red : null),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: err ? TColor.accent : null,
+      ),
     );
   }
 
@@ -43,9 +53,9 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
     setState(() => _loading = true);
     try {
       final body = {
-        'start_date'  : _start.toUtc().toIso8601String(),
-        'end_date'    : _end.toUtc().toIso8601String(),
-        'days_of_week': _days.map((i)=>_fullWeek[i-1]).toList(),
+        'start_date': _start.toUtc().toIso8601String(),
+        'end_date': _end.toUtc().toIso8601String(),
+        'days_of_week': _days.map((i) => _fullWeek[i - 1]).toList(),
       };
       final res = await ApiService.putWithToken(
         '${ApiRoutes.subs}/${widget.subscription.id}',
@@ -82,7 +92,6 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
         _snack('Subscription extended +30 days');
-
         setState(() => _end = newEnd);
       } else {
         throw 'HTTP ${res.statusCode}';
@@ -94,16 +103,22 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
     }
   }
 
-
   Future<void> _cancel() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Cancel Subscription'),
-        content: const Text('Are you sure you want to cancel this subscription?'),
+        content: const Text(
+            'Are you sure you want to cancel this subscription?'),
         actions: [
-          TextButton(onPressed: ()=>Navigator.pop(context,false), child: const Text('No')),
-          TextButton(onPressed: ()=>Navigator.pop(context,true),  child: const Text('Yes')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
+          ),
         ],
       ),
     );
@@ -131,11 +146,20 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Subscription'),
-        backgroundColor: TColor.primary,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: IconThemeData(color: TColor.primary),
+        title: Text(
+          'Edit Subscription',
+          style: TextStyle(
+            color: TColor.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.save),
+            color: TColor.primary,
             onPressed: _loading ? null : _update,
           ),
         ],
@@ -146,22 +170,31 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            _dateRow('Start', _start, (d)=>setState(()=>_start=d)),
+            _dateRow('Start', _start, (d) => setState(() => _start = d)),
             const SizedBox(height: 10),
-            _dateRow('End',   _end,   (d)=>setState(()=>_end=d)),
+            _dateRow('End', _end, (d) => setState(() => _end = d)),
             const SizedBox(height: 20),
             Wrap(
               spacing: 6,
               children: List.generate(7, (i) {
-                final sel = _days.contains(i+1);
+                final sel = _days.contains(i + 1);
                 return FilterChip(
-                  label: Text(_shortWeek[i]),
+                  label: Text(
+                    _shortWeek[i],
+                    style: TextStyle(
+                        color: sel ? Colors.white : TColor.textPrimary),
+                  ),
                   selected: sel,
                   onSelected: (_) => setState(() {
-                    if (!sel) _days.add(i+1); else _days.remove(i+1);
+                    if (!sel) {
+                      _days.add(i + 1);
+                    } else {
+                      _days.remove(i + 1);
+                    }
                   }),
-                  selectedColor: TColor.secondary,
-                  labelStyle: TextStyle(color: sel ? Colors.white : Colors.black),
+                  selectedColor: TColor.primary,
+                  checkmarkColor: Colors.white,
+                  backgroundColor: TColor.background,
                 );
               }),
             ),
@@ -173,12 +206,17 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
                   onPressed: _loading ? null : _extend,
                   icon: const Icon(Icons.date_range),
                   label: const Text('Prolong +30'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: TColor.primary,
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: _loading ? null : _cancel,
                   icon: const Icon(Icons.cancel_outlined),
                   label: const Text('Cancel'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: TColor.accent,
+                  ),
                 ),
               ],
             ),
@@ -188,12 +226,19 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
     );
   }
 
-  Widget _dateRow(String label, DateTime v, ValueChanged<DateTime> onPick) {
+  Widget _dateRow(
+      String label, DateTime v, ValueChanged<DateTime> onPick) {
     return Row(
       children: [
         SizedBox(
           width: 80,
-          child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: TColor.textPrimary,
+            ),
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -208,11 +253,16 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
               if (p != null) onPick(p);
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              padding:
+              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(10)),
-              child: Text(DateFormat('dd.MM.yyyy').format(v)),
+                border: Border.all(color: TColor.divider),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                DateFormat('dd.MM.yyyy').format(v),
+                style: TextStyle(color: TColor.textPrimary),
+              ),
             ),
           ),
         ),

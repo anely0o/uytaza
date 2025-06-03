@@ -18,13 +18,11 @@ class SubscriptionCell extends StatelessWidget {
       onTap: onPressed,
       child: SizedBox(
         width: context.width * 0.7,
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
-
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(8),
               child: Image.asset(
                 obj["img"] as String? ?? "",
                 width: double.infinity,
@@ -37,17 +35,16 @@ class SubscriptionCell extends StatelessWidget {
               obj["title"] as String? ?? "",
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: TColor.primaryText,
+                color: TColor.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               obj["subtitle"] as String? ?? "",
               textAlign: TextAlign.center,
-              style: TextStyle(color: TColor.secondaryText, fontSize: 14),
+              style: TextStyle(color: TColor.textSecondary, fontSize: 14),
             ),
           ],
         ),
