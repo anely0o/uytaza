@@ -246,25 +246,32 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 child: Text(
                   'No matching orders.',
                   style: TextStyle(
-                      fontSize: 16,
-                      color: TColor.textSecondary),
+                    fontSize: 16,
+                    color: TColor.textSecondary,
+                  ),
                 ),
               )
                   : ListView.builder(
                 itemCount: filteredOrders.length,
                 itemBuilder: (context, index) {
                   final order = filteredOrders[index];
-                  final formattedDate = DateFormat('dd MMM yyyy, HH:mm')
+                  final formattedDate = DateFormat(
+                      'dd MMM yyyy, HH:mm')
                       .format(order.scheduledAt);
                   final serviceNames = order.serviceIds
-                      .map((id) => _serviceNames[id] ?? id.toString())
+                      .map((id) =>
+                  _serviceNames[id] ?? id.toString())
                       .join(', ');
+
+                  final isPending =
+                      order.status.toLowerCase() == 'pending';
 
                   return Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    margin:
+                    const EdgeInsets.symmetric(vertical: 10),
                     elevation: 4,
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
@@ -274,7 +281,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             fontWeight: FontWeight.bold),
                       ),
                       subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
                         children: [
                           Text('Address: ${order.address}'),
                           if (order.comment != null &&
@@ -287,24 +295,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               const Text(
                                 'Status: ',
                                 style: TextStyle(
-                                    fontWeight: FontWeight.w500),
+                                    fontWeight:
+                                    FontWeight.w500),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(
+                                padding:
+                                const EdgeInsets.symmetric(
                                   horizontal: 10,
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: order.status == 'completed'
+                                  color: order.status ==
+                                      'completed'
                                       ? Colors.green[100]
                                       : Colors.orange[100],
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius:
+                                  BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   order.status[0].toUpperCase() +
                                       order.status.substring(1),
                                   style: TextStyle(
-                                    color: order.status == 'completed'
+                                    color: order.status ==
+                                        'completed'
                                         ? Colors.green
                                         : Colors.orange,
                                     fontWeight: FontWeight.w600,
@@ -313,17 +326,30 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               ),
                             ],
                           ),
+                          if (isPending) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Please pay for order',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 10),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisAlignment:
+                            MainAxisAlignment.end,
                             children: [
                               TextButton(
                                 onPressed: () async {
                                   final updated = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => OrderEditPage(
-                                          orderId: order.id),
+                                      builder: (_) =>
+                                          OrderEditPage(
+                                              orderId:
+                                              order.id),
                                     ),
                                   );
                                   if (updated == true) {
@@ -332,27 +358,36 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 },
                                 child: Text(
                                   "Edit",
-                                  style: TextStyle(color: TColor.primary),
+                                  style: TextStyle(
+                                      color: TColor.primary),
                                 ),
                               ),
                               TextButton(
                                 onPressed: () async {
-                                  final confirmed = await showDialog<bool>(
+                                  final confirmed =
+                                  await showDialog<bool>(
                                     context: context,
                                     builder: (_) => AlertDialog(
-                                      title: const Text('Confirm'),
-                                      content:
-                                      const Text('Delete this order?'),
+                                      title:
+                                      const Text('Confirm'),
+                                      content: const Text(
+                                          'Delete this order?'),
                                       actions: [
                                         TextButton(
                                           onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text("No"),
+                                              Navigator.pop(
+                                                  context,
+                                                  false),
+                                          child:
+                                          const Text("No"),
                                         ),
                                         TextButton(
                                           onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text("Yes"),
+                                              Navigator.pop(
+                                                  context,
+                                                  true),
+                                          child:
+                                          const Text("Yes"),
                                         ),
                                       ],
                                     ),
@@ -363,7 +398,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 },
                                 child: const Text(
                                   "Delete",
-                                  style: TextStyle(color: Colors.red),
+                                  style: TextStyle(
+                                      color: Colors.red),
                                 ),
                               ),
                             ],

@@ -78,12 +78,20 @@ class _MainTabPageState extends State<MainTabPage> {
 
   Future<void> _loadUnread() async {
     try {
-      final res = await ApiService.getWithToken(ApiRoutes.notificationsCount);
+      // Вместо /notificationsCount возьмём полный список
+      final res = await ApiService.getWithToken('/api/notifications');
       if (res.statusCode == 200) {
-        final n = jsonDecode(res.body)['unread'] as int? ?? 0;
-        if (mounted) setState(() => _unread = n);
+        final List<dynamic> decoded = jsonDecode(res.body);
+        // Оставляем только те элементы, у которых "read" == false
+        final unreadCount = decoded
+            .whereType<Map<String, dynamic>>()
+            .where((n) => (n['is_read'] as bool? ?? false) == false)
+            .length;
+        if (mounted) setState(() => _unread = unreadCount);
       }
-    } catch (_) {}
+    } catch (_) {
+      // игнорируем ошибку сети
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -254,19 +262,20 @@ class _MainTabPageState extends State<MainTabPage> {
             onPressed: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen()),
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
               );
               _loadUnread();
             },
             icon: badges.Badge(
               showBadge: _unread > 0,
-              badgeContent: const SizedBox.shrink(), // без цифр
+              badgeContent: const SizedBox.shrink(), // пустое содержимое
               badgeStyle: badges.BadgeStyle(
-                badgeColor: Colors.yellow, // жёлтая «точка»
-                padding: const EdgeInsets.all(4),
+                shape: badges.BadgeShape.circle,
+                badgeColor: Colors.yellow,
+                padding: const EdgeInsets.all(6),    // тут определяем «радиус» точки
                 elevation: 0,
               ),
+              position: badges.BadgePosition.topEnd(top: -4, end: -4),
               child: Icon(
                 Icons.notifications_none_rounded,
                 color: TColor.primary,

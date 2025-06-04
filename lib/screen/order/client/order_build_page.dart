@@ -1,4 +1,5 @@
 // lib/screen/order/client/order_build_page.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,8 @@ import 'package:uytaza/screen/models/cleaning_service.dart';
 import 'package:uytaza/screen/profile/profile_api.dart';
 import 'package:uytaza/screen/profile/client/choose_address_screen.dart';
 import 'package:uytaza/common/extension.dart';
+import '../../payment/payment_page.dart';
+import '../../subscription/subscription_build_page.dart';
 import 'order_success_page.dart';
 
 class OrderBuildPage extends StatefulWidget {
@@ -70,8 +73,8 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       if (res.statusCode == 200) {
         final list = jsonDecode(res.body) as List<dynamic>;
         services = list
-            .map((e) => CleaningService.fromJson(
-            Map<String, dynamic>.from(e)))
+            .map((e) =>
+            CleaningService.fromJson(Map<String, dynamic>.from(e)))
             .toList();
       } else {
         _showError('Services HTTP ${res.statusCode}');
@@ -177,8 +180,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     };
 
     try {
-      final res =
-      await ApiService.postWithToken(ApiRoutes.orders, body);
+      final res = await ApiService.postWithToken(ApiRoutes.orders, body);
       if (res.statusCode == 201) {
         final Map<String, dynamic> orderJson = res.body.isNotEmpty
             ? Map<String, dynamic>.from(jsonDecode(res.body))
@@ -197,8 +199,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     }
   }
 
-  Future<void> _onOrderSuccess(
-      Map<String, dynamic> orderJson) async {
+  Future<void> _onOrderSuccess(Map<String, dynamic> orderJson) async {
     if (!mounted) return;
 
     final repeat = await showDialog<bool>(
@@ -221,23 +222,36 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     );
 
     if (repeat == true) {
-      Navigator.pushReplacementNamed(
-        context,
-        '/new-sub',
-        arguments: {
-          'service_ids': orderJson['service_ids'],
-          'start_date': orderJson['date'],
-          'price': orderJson['total_price'] ?? totalPrice,
-        },
-      );
-    } else {
+      // НОВЫЙ ВАРИАНТ — передаём только строку с ID заказа:
+      final orderId = orderJson['id']?.toString() ?? '';
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const OrderSuccessPage(),
+          builder: (_) => const SubscriptionBuildPage(),
+          settings: RouteSettings(arguments: orderId),
         ),
       );
+      return;
     }
+
+    // Если пользователь не захотел подписку — идём на оплату:
+    final orderId = orderJson['id']?.toString() ?? '';
+    final userId = orderJson['user_id']?.toString() ?? '';
+    final amount = (orderJson['total_price'] is num)
+        ? (orderJson['total_price'] as num).toInt()
+        : totalPrice.toInt();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentPage(
+          entityType: 'order',
+          entityId: orderId,
+          userId: userId,
+          amount: amount,
+        ),
+      ),
+    );
   }
 
   void _showError(String msg) {
@@ -269,7 +283,8 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
         ),
       ),
       body: loadingServices
-          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          ? const Center(
+          child: CircularProgressIndicator(color: Colors.white))
           : Column(
         children: [
           Expanded(
@@ -322,9 +337,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
           child: TextField(
             controller: addressCtl,
             decoration: InputDecoration(
-              hintText: loadingProfile
-                  ? 'Loading...'
-                  : 'Tap to select address',
+              hintText: loadingProfile ? 'Loading...' : 'Tap to select address',
               suffixIcon: const Icon(Icons.location_on_outlined),
               fillColor: TColor.background,
               filled: true,
@@ -390,8 +403,9 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
                   vertical: isSel ? 0 : 10,
                 ),
                 decoration: BoxDecoration(
-                  color:
-                  isSel ? TColor.primary.withOpacity(0.1) : TColor.background,
+                  color: isSel
+                      ? TColor.primary.withOpacity(0.1)
+                      : TColor.background,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isSel ? TColor.primary : TColor.divider,
@@ -436,8 +450,9 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
                           fontSize: 16,
                           fontWeight:
                           isSel ? FontWeight.bold : FontWeight.normal,
-                          color:
-                          isSel ? TColor.textPrimary : TColor.textSecondary,
+                          color: isSel
+                              ? TColor.textPrimary
+                              : TColor.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -516,17 +531,13 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     }
 
     for (int day = 1; day <= daysCount; day++) {
-      final cur = DateTime(
-          selectedDate.year, selectedDate.month, day);
+      final cur = DateTime(selectedDate.year, selectedDate.month, day);
       final sel = selectedDate.day == day;
-      final past = cur.isBefore(
-          DateTime.now().subtract(const Duration(days: 1)));
+      final past = cur.isBefore(DateTime.now().subtract(const Duration(days: 1)));
 
       currentRow.add(Expanded(
         child: GestureDetector(
-          onTap: past
-              ? null
-              : () => setState(() => selectedDate = cur),
+          onTap: past ? null : () => setState(() => selectedDate = cur),
           child: Container(
             margin: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -565,8 +576,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
               onPressed: () => setState(() {
@@ -614,21 +624,19 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       const SizedBox(height: 10),
       GestureDetector(
         onTap: () async {
-          final t = await showTimePicker(
-              context: context, initialTime: selectedTime);
+          final t =
+          await showTimePicker(context: context, initialTime: selectedTime);
           if (t != null) setState(() => selectedTime = t);
         },
         child: Container(
-          padding:
-          const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
             color: TColor.background,
             border: Border.all(color: TColor.divider),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
-            mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 selectedTime.format(context),
@@ -649,8 +657,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       const SizedBox(height: 10),
       Text(
         'Total: ${totalPrice.toStringAsFixed(0)} ₸',
-        style: const TextStyle(
-            fontSize: 18, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
     ],
   );

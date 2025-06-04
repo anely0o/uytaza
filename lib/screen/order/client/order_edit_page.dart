@@ -1,10 +1,13 @@
+// lib/screen/order/client/order_edit_page.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uytaza/screen/payment/payment_page.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/models/order_model.dart';
 import 'package:uytaza/api/api_service.dart';
-import 'package:uytaza/api/api_routes.dart';
+
+import '../../../api/api_routes.dart';
 
 class OrderEditPage extends StatefulWidget {
   final String orderId;
@@ -19,37 +22,160 @@ class _OrderEditPageState extends State<OrderEditPage> {
   bool _saving = false;
   String? _error;
 
+  // Статус и сумма заказа (₸)
+  String? _status;
+  double _amount = 0.0;
+
   DateTime _date = DateTime.now();
   TimeOfDay _time = TimeOfDay.now();
   final TextEditingController _addrCtl = TextEditingController();
   final TextEditingController _noteCtl = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
   Future<void> _load() async {
+    setState(() => _loading = true);
+
     try {
       final res = await ApiService.getWithToken(
         '${ApiRoutes.orders}/${widget.orderId}',
       );
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final order = Order.fromJson(data);
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
 
-        _date = order.scheduledAt;
-        _time = TimeOfDay.fromDateTime(order.scheduledAt);
-        _addrCtl.text = order.address;
-        _noteCtl.text = order.comment ?? '';
+        // 1) Сохраняем статус
+        _status = (data['status'] as String).toLowerCase();
+
+        // 2) Дата/время
+        // В ответе у вас может быть ключ "date" или "scheduled_at" – проверьте, как у вас.
+        // Я предполагаю, что используется "date" (ISO-строка).
+        final dateStr = (data['date'] as String?) ?? (data['scheduled_at'] as String?);
+        if (dateStr != null) {
+          _date = DateTime.parse(dateStr).toLocal();
+          _time = TimeOfDay.fromDateTime(_date);
+        }
+
+        // 3) Адрес и комментарий
+        _addrCtl.text = data['address'] as String? ?? '';
+        _noteCtl.text = data['comment'] as String? ?? '';
+
+        // 4) Сумма заказа:
+        //    a) Если пришло поле "total_price", используем его
+        if (data.containsKey('total_price')) {
+          final tp = data['total_price'];
+          if (tp is num) {
+            _amount = tp.toDouble();
+          } else {
+            _amount = double.tryParse(tp.toString()) ?? 0.0;
+          }
+        }
+        //    b) Иначе, если есть "price" — используем его
+        else if (data.containsKey('price')) {
+          final p = data['price'];
+          if (p is num) {
+            _amount = p.toDouble();
+          } else {
+            _amount = double.tryParse(p.toString()) ?? 0.0;
+          }
+        }
+
+              if (_amount == 0.0 && data.containsKey('service_ids')) {
+                final ids = (data['service_ids'] as List).cast<String>();
+                double sum = 0.0;
+                for (var sid in ids) {
+                  final svcRes = await ApiService.getWithToken('/api/services/$sid');
+                  if (svcRes.statusCode == 200) {
+                    final svcJson = jsonDecode(svcRes.body) as Map<String, dynamic>;
+                    final priceField = svcJson['price'];
+                    if (priceField is num) sum += priceField.toDouble();
+                  }
+                }
+                _amount = sum;
+              }
+
+        if (_amount <= 0.0) {
+          // Ниже строку можно закомментировать, если не нужны предупреждения в отладке:
+          debugPrint('Warning: Order ${widget.orderId} has amount = 0');
+        }
+
         _error = null;
       } else {
         _error = 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _error = '$e';
+      _error = e.toString();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  /// Извлекает user_id из JWT-токена (payload)
+  Future<String?> _extractUserIdFromToken() async {
+    final rawToken = await ApiService.getToken();
+    if (rawToken == null || rawToken.split('.').length != 3) return null;
+
+    final parts = rawToken.split('.');
+    var payloadBase64 = parts[1]
+        .replaceAll('-', '+')
+        .replaceAll('_', '/'); // URL-safe Base64 → обычный Base64
+    final normalized = base64.normalize(payloadBase64);
+    final decoded = utf8.decode(base64.decode(normalized));
+    final Map<String, dynamic> payload = jsonDecode(decoded);
+
+    if (payload.containsKey('user_id')) {
+      return payload['user_id'].toString();
+    } else if (payload.containsKey('id')) {
+      return payload['id'].toString();
+    } else if (payload.containsKey('sub')) {
+      return payload['sub'].toString();
+    }
+    return null;
+  }
+
+  void _navigateToPayment() async {
+    // Если сумма равна нулю — не идём дальше
+    if (_amount <= 0.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Сумма заказа равна нулю и не может быть оплачена.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final extractedUserId = await _extractUserIdFromToken();
+    if (extractedUserId == null || extractedUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось извлечь user_id из токена.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final amountInt = _amount.toInt();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentPage(
+          entityType: 'order',
+          entityId: widget.orderId,
+          userId: extractedUserId,
+          amount: amountInt,
+        ),
+      ),
+    );
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
+
     final body = {
       'address': _addrCtl.text.trim(),
       'comment': _noteCtl.text.trim(),
@@ -82,12 +208,6 @@ class _OrderEditPageState extends State<OrderEditPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
   }
 
   @override
@@ -161,6 +281,31 @@ class _OrderEditPageState extends State<OrderEditPage> {
           ),
           maxLines: 3,
         ),
+        const SizedBox(height: 20),
+
+        // Если статус заказа – "pending", показываем кнопку оплаты
+        if (_status == 'pending')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _navigateToPayment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Pay for Order',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
       ],
     ),
   );
@@ -205,10 +350,8 @@ class _OrderEditPageState extends State<OrderEditPage> {
       const SizedBox(width: 8),
       TextButton(
         onPressed: () async {
-          final picked = await showTimePicker(
-            context: ctx,
-            initialTime: _time,
-          );
+          final picked =
+          await showTimePicker(context: ctx, initialTime: _time);
           if (picked != null) setState(() => _time = picked);
         },
         child: Text(

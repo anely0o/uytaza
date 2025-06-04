@@ -1,4 +1,5 @@
 // lib/screen/subscription/subscription_edit_page.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -16,12 +17,14 @@ class SubscriptionEditPage extends StatefulWidget {
 }
 
 class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
-  late DateTime _start, _end;
+  late DateTime _start;
+  late DateTime _end;
   late Set<int> _days;
   bool _loading = false;
+  String? _error;
 
-  // Полные и краткие названия дней
-  final _fullWeek = [
+  // Полные и краткие названия дней недели:
+  final List<String> _fullWeek = [
     'Monday',
     'Tuesday',
     'Wednesday',
@@ -30,21 +33,23 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
     'Saturday',
     'Sunday'
   ];
-  final _shortWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  final List<String> _shortWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   @override
   void initState() {
     super.initState();
+    // Инициализируем локальные значения из переданной subscription:
     _start = widget.subscription.start;
     _end = widget.subscription.end;
+    // widget.subscription.days уже приходит как List<int>, например [1,5,7]
     _days = widget.subscription.days.toSet();
   }
 
-  void _snack(String msg, {bool err = false}) {
+  void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: err ? TColor.accent : null,
+        backgroundColor: isError ? TColor.accent : null,
       ),
     );
   }
@@ -52,35 +57,39 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
   Future<void> _update() async {
     setState(() => _loading = true);
     try {
+      // Формируем тело запроса так, чтобы days_of_week были строками:
       final body = {
         'start_date': _start.toUtc().toIso8601String(),
         'end_date': _end.toUtc().toIso8601String(),
-        'days_of_week': _days.map((i) => _fullWeek[i - 1]).toList(),
+        'days_of_week': _days.map((i) => _shortWeek[i - 1]).toList(),
       };
+
       final res = await ApiService.putWithToken(
         '${ApiRoutes.subs}/${widget.subscription.id}',
         body,
       );
+
       if (res.statusCode == 200) {
-        _snack('Subscription updated');
+        _showSnack('Subscription updated');
         Navigator.pop(context, true);
       } else {
-        throw 'HTTP ${res.statusCode}';
+        final map = res.body.isNotEmpty
+            ? jsonDecode(res.body)
+            : {'error': 'HTTP ${res.statusCode}'};
+        throw map['error'] ?? 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _snack('Update failed: $e', err: true);
+      _showSnack('Update failed: $e', isError: true);
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _extend() async {
     setState(() => _loading = true);
 
-    // 1) вычисляем новую дату окончания +30 дней
+    // Вычисляем новую дату окончания (+30 дней)
     final newEnd = _end.add(const Duration(days: 30));
-
-    // 2) формируем тело с обязательным полем end_date
     final body = {
       'end_date': newEnd.toUtc().toIso8601String(),
     };
@@ -90,16 +99,23 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
         '${ApiRoutes.subs}/extend/${widget.subscription.id}',
         body,
       );
+
       if (res.statusCode == 200 || res.statusCode == 201) {
-        _snack('Subscription extended +30 days');
-        setState(() => _end = newEnd);
+        _showSnack('Subscription extended +30 days');
+        // Обновляем локальный _end
+        setState(() {
+          _end = newEnd;
+        });
       } else {
-        throw 'HTTP ${res.statusCode}';
+        final map = res.body.isNotEmpty
+            ? jsonDecode(res.body)
+            : {'error': 'HTTP ${res.statusCode}'};
+        throw map['error'] ?? 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _snack('Extend failed: $e', err: true);
+      _showSnack('Extend failed: $e', isError: true);
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -108,8 +124,7 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Cancel Subscription'),
-        content: const Text(
-            'Are you sure you want to cancel this subscription?'),
+        content: const Text('Are you sure you want to cancel this subscription?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -130,15 +145,15 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
         '${ApiRoutes.subs}/${widget.subscription.id}',
       );
       if (res.statusCode == 200 || res.statusCode == 204) {
-        _snack('Subscription cancelled');
+        _showSnack('Subscription cancelled');
         Navigator.pop(context, true);
       } else {
         throw 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _snack('Cancel failed: $e', err: true);
+      _showSnack('Cancel failed: $e', isError: true);
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -170,26 +185,25 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            _dateRow('Start', _start, (d) => setState(() => _start = d)),
-            const SizedBox(height: 10),
-            _dateRow('End', _end, (d) => setState(() => _end = d)),
-            const SizedBox(height: 20),
+            // 1) Выбор дней недели
             Wrap(
               spacing: 6,
               children: List.generate(7, (i) {
-                final sel = _days.contains(i + 1);
+                final dayIndex = i + 1; // от 1 до 7
+                final isSelected = _days.contains(dayIndex);
                 return FilterChip(
                   label: Text(
                     _shortWeek[i],
                     style: TextStyle(
-                        color: sel ? Colors.white : TColor.textPrimary),
+                      color: isSelected ? Colors.white : TColor.textPrimary,
+                    ),
                   ),
-                  selected: sel,
+                  selected: isSelected,
                   onSelected: (_) => setState(() {
-                    if (!sel) {
-                      _days.add(i + 1);
+                    if (isSelected) {
+                      _days.remove(dayIndex);
                     } else {
-                      _days.remove(i + 1);
+                      _days.add(dayIndex);
                     }
                   }),
                   selectedColor: TColor.primary,
@@ -199,6 +213,8 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
               }),
             ),
             const SizedBox(height: 30),
+
+            // 2) Кнопки «Prolong +30» и «Cancel»
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -223,50 +239,6 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _dateRow(
-      String label, DateTime v, ValueChanged<DateTime> onPick) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: TColor.textPrimary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: GestureDetector(
-            onTap: () async {
-              final p = await showDatePicker(
-                context: context,
-                initialDate: v,
-                firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-              );
-              if (p != null) onPick(p);
-            },
-            child: Container(
-              padding:
-              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border.all(color: TColor.divider),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                DateFormat('dd.MM.yyyy').format(v),
-                style: TextStyle(color: TColor.textPrimary),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

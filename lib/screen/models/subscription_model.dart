@@ -4,7 +4,7 @@ class Subscription {
   final String id;
   final String orderId;
   final DateTime start;
-  final DateTime end;
+  late final DateTime end;
   final List<int> days;     // 1..7
   final String status;
 

@@ -5,7 +5,9 @@ import 'package:uytaza/screen/history/history_screen.dart';
 import 'package:uytaza/screen/home/home_screen.dart';
 import 'package:uytaza/screen/login/splash_screen.dart';
 import 'package:uytaza/screen/main/main_tab_page.dart';
+import 'package:uytaza/screen/order/client/order_success_page.dart';
 import 'package:uytaza/screen/order/client/orders_screen.dart';
+import 'package:uytaza/screen/payment/payment_page.dart';
 import 'package:uytaza/screen/profile/rate_of_service_screen.dart';
 import 'package:uytaza/screen/subscription/subscription_build_page.dart';
 import 'package:uytaza/screen/subscription/subscriptions_screen.dart';
@@ -61,6 +63,13 @@ class MyApp extends StatelessWidget {
         '/new-sub': (context) => const SubscriptionBuildPage(),
         '/subscriptions': (context) => const SubscriptionsScreen(),
         '/history': (ctx) => const HistoryScreen(),
+        '/payment': (ctx) => const PaymentPage(
+          entityType: '', // эти параметры будут переопределены при pushReplacement с аргументами
+          entityId: '',
+          userId: '',
+          amount: 0,
+        ),
+        '/order-success': (ctx) => const OrderSuccessPage(),
       },
 
       // onGenerateRoute will catch any route that needs an argument,

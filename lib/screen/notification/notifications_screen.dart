@@ -48,11 +48,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _onTapNotification(Map<String, dynamic> notif) async {
-    final isRead = (notif['read'] as bool?) ?? false;
+    final isRead = (notif['is_read'] as bool?) ?? false;
     if (!isRead) {
       await _markAsRead(notif['id'].toString());
       setState(() {
-        notif['read'] = true;
+        notif['is_read'] = true;
       });
     }
 
@@ -75,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     final filteredItems = _showRead
         ? _items
-        : _items.where((n) => !(n['read'] as bool? ?? false)).toList();
+        : _items.where((n) => !(n['is_read'] as bool? ?? false)).toList();
 
     return Scaffold(
       backgroundColor: TColor.background,
@@ -103,7 +103,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, i) {
           final n = filteredItems[i];
-          final isRead = (n['read'] as bool?) ?? false;
+          final isRead = (n['is_read'] as bool?) ?? false;
 
           // Форматирование времени
           String formattedTime = '';
