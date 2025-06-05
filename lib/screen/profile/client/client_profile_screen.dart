@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
 
-import 'package:uytaza/screen/profile/client/settings_screen.dart';
+import 'package:uytaza/screen/profile/settings_screen.dart';
 
 
 import 'choose_address_screen.dart';

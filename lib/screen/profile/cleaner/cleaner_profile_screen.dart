@@ -1,16 +1,14 @@
-// lib/screen/profile/cleaner/cleaner_profile_screen.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
-import 'package:uytaza/screen/profile/client/settings_screen.dart';
-
+import 'package:uytaza/api/api_routes.dart';
 import '../../order/cleaner/cleaner_orders_screen.dart';
+import '../settings_screen.dart';
 
 class CleanerProfileScreen extends StatefulWidget {
-  const CleanerProfileScreen({super.key});
+  const CleanerProfileScreen({Key? key}) : super(key: key);
 
   @override
   State<CleanerProfileScreen> createState() => _CleanerProfileScreenState();
@@ -18,12 +16,13 @@ class CleanerProfileScreen extends StatefulWidget {
 
 class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   final TextEditingController _firstNameCtl = TextEditingController();
-  final TextEditingController _lastNameCtl = TextEditingController();
+  final TextEditingController _lastNameCtl  = TextEditingController();
   double _rating = 0.0;
-  bool _loading = true;
+  int    _jobsDone = 0;
+  double _experienceYears = 0.0;
+  bool   _loading = true;
   String? _error;
 
-  // Список отзывов
   List<Map<String, dynamic>> _reviews = [];
 
   @override
@@ -36,42 +35,37 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _reviews = [];
     });
 
     try {
-      // 1) Получаем профиль (имя, фамилию) текущего клинера
-      final profileRes = await ApiService.getWithToken('/api/auth/profile');
+      // 1) Профиль текущего клинера
+      final profileRes = await ApiService.getWithToken(ApiRoutes.profile);
       if (profileRes.statusCode != 200) {
-        throw 'Ошибка ${profileRes.statusCode} при загрузке профиля';
+        throw 'Error ${profileRes.statusCode}';
       }
       final profileData = jsonDecode(profileRes.body) as Map<String, dynamic>;
-      _firstNameCtl.text =
-          profileData['FirstName'] ?? profileData['first_name'] ?? '';
-      _lastNameCtl.text =
-          profileData['LastName'] ?? profileData['last_name'] ?? '';
+      _firstNameCtl.text = (profileData['FirstName'] ?? profileData['first_name'] ?? '').toString();
+      _lastNameCtl.text  = (profileData['LastName']  ?? profileData['last_name']  ?? '').toString();
 
-      // 2) Получаем рейтинг клинера
-      // Предположим, что есть endpoint GET /api/rating/cleaner/:id
-      final cleanerId = profileData['id']?.toString() ?? '';
+      final cleanerId = (profileData['id'] ?? '').toString();
+
       if (cleanerId.isNotEmpty) {
-        final ratingRes =
-        await ApiService.getWithToken('/api/rating/cleaner/$cleanerId');
+        // 2) Рейтинг, jobsDone, experienceYears
+        final ratingRes = await ApiService.getWithToken('${ApiRoutes.ratingCleaner}$cleanerId');
         if (ratingRes.statusCode == 200) {
-          final rd = jsonDecode(ratingRes.body);
-          _rating = double.tryParse(rd['rating'].toString()) ?? 0.0;
+          final rd = jsonDecode(ratingRes.body) as Map<String, dynamic>;
+          _rating = (rd['rating'] ?? 0).toDouble();
+          _jobsDone = (rd['jobs_done'] ?? 0) as int;
+          _experienceYears = (rd['experience_years'] ?? 0).toDouble();
         }
-      }
 
-      // 3) Получаем список отзывов для данного клинера
-      // Предполагается, что есть endpoint /api/reviews/cleaner/:cleanerId
-      final reviewsRes =
-      await ApiService.getWithToken('/api/reviews/cleaner/$cleanerId');
-      if (reviewsRes.statusCode == 200) {
-        final list = jsonDecode(reviewsRes.body) as List<dynamic>;
-        _reviews = list.whereType<Map<String, dynamic>>().toList();
-      } else {
-        // Если 404 или что-то – просто оставляем пустой список
-        _reviews = [];
+        // 3) Отзывы
+        final reviewsRes = await ApiService.getWithToken('${ApiRoutes.reviewsCleaner}$cleanerId');
+        if (reviewsRes.statusCode == 200) {
+          final list = jsonDecode(reviewsRes.body) as List<dynamic>;
+          _reviews = list.whereType<Map<String, dynamic>>().toList();
+        }
       }
     } catch (e) {
       _error = e.toString();
@@ -111,20 +105,18 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(30)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                 boxShadow: TColor.softShadow,
               ),
               child: ListView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 30),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 children: [
                   const SizedBox(height: 8),
                   _buildRatingTile(),
                   const SizedBox(height: 16),
                   _buildReviewsSection(),
                   const SizedBox(height: 30),
-                  _buildNavigationTile(), // боковое меню (история заказов, поддержка, о нас)
+                  _buildNavigationTile(),
                 ],
               ),
             ),
@@ -139,20 +131,16 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
       child: Column(
         children: [
           Padding(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                const Expanded(
-                  child: SizedBox(), // просто пустое место под заголовок
-                ),
+                const Expanded(child: SizedBox()),
                 IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (_) => const SettingsScreen()),
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     );
                   },
                 ),
@@ -167,7 +155,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            "${_firstNameCtl.text} ${_lastNameCtl.text}",
+            '${_firstNameCtl.text} ${_lastNameCtl.text}'.trim(),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 22,
@@ -204,6 +192,20 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           );
         }),
       ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Jobs: $_jobsDone',
+            style: TextStyle(color: TColor.textSecondary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Exp: ${_experienceYears.toStringAsFixed(1)} y',
+            style: TextStyle(color: TColor.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 
@@ -222,18 +224,19 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
         Text(
           'Отзывы о ваших услугах',
           style: TextStyle(
-              color: TColor.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold),
+            color: TColor.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 12),
         ..._reviews.map((r) {
           final client = r['client'] as Map<String, dynamic>? ?? {};
-          final clientName = "${client['first_name'] ?? ''} ${client['last_name'] ?? ''}";
-          final rating = r['rating']?.toDouble() ?? 0.0;
+          final clientName = '${client['first_name'] ?? ''} ${client['last_name'] ?? ''}'.trim();
+          final rating = (r['rating'] as num?)?.toDouble() ?? 0.0;
           final comment = r['comment']?.toString() ?? '';
           final createdAtIso = r['created_at']?.toString() ?? '';
-          DateTime? createdAtDt = DateTime.tryParse(createdAtIso);
+          final createdAtDt = DateTime.tryParse(createdAtIso);
           final createdAt = createdAtDt != null
               ? DateFormat('dd MMM yyyy').format(createdAtDt.toLocal())
               : '';
@@ -241,8 +244,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 8),
             elevation: 2,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -251,8 +253,9 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
                   Text(
                     clientName,
                     style: TextStyle(
-                        color: TColor.textPrimary,
-                        fontWeight: FontWeight.bold),
+                      color: TColor.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -273,8 +276,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
                   if (createdAt.isNotEmpty)
                     Text(
                       createdAt,
-                      style: TextStyle(
-                          color: TColor.textSecondary, fontSize: 12),
+                      style: TextStyle(color: TColor.textSecondary, fontSize: 12),
                     ),
                 ],
               ),
@@ -291,61 +293,20 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
         const Divider(),
         ListTile(
           onTap: () {
-            // «История заказов»
+            // История заказа (может открывать тот же CleanerOrdersScreen)
             Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const CleanerOrdersScreen()),
+              MaterialPageRoute(builder: (_) => const CleanerOrdersScreen()),
             );
           },
           leading: Icon(Icons.history, color: TColor.primary),
           title: Text(
-            "История заказов",
-            style: TextStyle(
-                color: TColor.textPrimary,
-                fontWeight: FontWeight.bold),
+            "History",
+            style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold),
           ),
-          trailing:
-          Icon(Icons.chevron_right, color: TColor.textPrimary),
+          trailing: Icon(Icons.chevron_right, color: TColor.textPrimary),
         ),
-        ListTile(
-          onTap: () {
-            // «Поддержка»
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const SettingsScreen() /* тут ваш SupportScreen */),
-            );
-          },
-          leading: Icon(Icons.support_agent, color: TColor.primary),
-          title: Text(
-            "Поддержка",
-            style: TextStyle(
-                color: TColor.textPrimary,
-                fontWeight: FontWeight.bold),
-          ),
-          trailing:
-          Icon(Icons.chevron_right, color: TColor.textPrimary),
-        ),
-        ListTile(
-          onTap: () {
-            // «О нас»
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => const SettingsScreen() /* тут ваш AboutUsScreen */),
-            );
-          },
-          leading: Icon(Icons.info_outline, color: TColor.primary),
-          title: Text(
-            "О нас",
-            style: TextStyle(
-                color: TColor.textPrimary,
-                fontWeight: FontWeight.bold),
-          ),
-          trailing:
-          Icon(Icons.chevron_right, color: TColor.textPrimary),
-        ),
+
       ],
     );
   }

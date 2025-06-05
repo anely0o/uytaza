@@ -15,12 +15,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
 
-  void _toggleNotifications(bool value) {
-    setState(() {
-      _notificationsEnabled = value;
-      // TODO: persist setting with API if needed
-    });
-  }
+
 
   void _navigateToAbout() {
     Navigator.push(
@@ -81,8 +76,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 20),
           children: [
-            _buildNotificationTile(),
-            const Divider(height: 1),
             _buildAboutTile(),
             const Divider(height: 1),
             _buildLogoutTile(),
@@ -92,22 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildNotificationTile() {
-    return SwitchListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-      title: Text(
-        'Notifications',
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      value: _notificationsEnabled,
-      activeColor: TColor.accent,
-      onChanged: _toggleNotifications,
-      secondary: Icon(Icons.notifications, color: TColor.primary),
-    );
-  }
+
 
   Widget _buildAboutTile() {
     return ListTile(

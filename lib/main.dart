@@ -70,6 +70,7 @@ class MyApp extends StatelessWidget {
           amount: 0,
         ),
         '/order-success': (ctx) => const OrderSuccessPage(),
+
       },
 
       // onGenerateRoute will catch any route that needs an argument,

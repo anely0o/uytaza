@@ -1,14 +1,15 @@
+// lib/screen/history/history_screen.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
-
+import 'package:uytaza/api/api_routes.dart';
 import 'cleaner_details_screen.dart';
 
 class CleanerOrdersScreen extends StatefulWidget {
-  const CleanerOrdersScreen({super.key});
+  const CleanerOrdersScreen({Key? key}) : super(key: key);
 
   @override
   State<CleanerOrdersScreen> createState() => _CleanerOrdersScreenState();
@@ -26,6 +27,11 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
   }
 
   Future<void> _fetchOrders() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
       final res = await ApiService.getWithToken(ApiRoutes.cleanerOrders);
       if (res.statusCode == 200) {
@@ -35,7 +41,7 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         _error = 'HTTP ${res.statusCode}';
       }
     } catch (e) {
-      _error = '$e';
+      _error = e.toString();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -47,26 +53,32 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: TColor.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: TColor.primary),
-        title: Text('My Orders',
-            style: TextStyle(
-                color: TColor.textPrimary, fontWeight: FontWeight.bold)),
-      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(child: Text(_error!))
           : RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView.separated(
+        child: _orders.isEmpty
+            ? ListView(
+          // нужен ListView, чтобы RefreshIndicator работал
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+            ),
+            Center(
+              child: Text(
+                'У вас ещё нет назначенных заказов, можете отдыхать.',
+                style: TextStyle(color: TColor.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        )
+            : ListView.separated(
           padding: const EdgeInsets.all(20),
           itemCount: _orders.length,
-          separatorBuilder: (_, __) =>
-          const SizedBox(height: 14),
+          separatorBuilder: (_, __) => const SizedBox(height: 14),
           itemBuilder: (_, i) => _orderCard(_orders[i]),
         ),
       ),
@@ -74,19 +86,20 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
   }
 
   Widget _orderCard(Map<String, dynamic> order) {
-    final id = order['id'].toString();
-    final address = order['address'] ?? '';
-    final status = order['status'] ?? '';
-    final startIso = order['start_time'] ?? order['scheduled_at'];
-    final startTime = DateTime.tryParse(startIso ?? '');
-    final fmtTime = startTime != null
-        ? DateFormat('dd MMM yyyy, HH:mm').format(startTime.toLocal())
+    final id       = order['_id']?.toString() ?? order['id'].toString();
+    final address  = order['address'] ?? '';
+    final status   = order['status'] ?? '';
+    final startIso = order['scheduled_at'] ?? order['start_time'] ?? '';
+    final startDt  = DateTime.tryParse(startIso);
+    final fmtTime  = startDt != null
+        ? DateFormat('dd MMM yyyy, HH:mm').format(startDt.toLocal())
         : '';
-    final client = order['client'] ?? {};
-    final clientName = (client['first_name'] ?? '') +
-        ' ' +
-        (client['last_name'] ?? '');
-    final rating = client['rating']?.toDouble() ?? 0.0;
+
+    final client   = order['client'] as Map<String, dynamic>? ?? {};
+    final clientName = '${client['first_name'] ?? ''} ${client['last_name'] ?? ''}'.trim();
+    final rating    = (client['rating'] != null)
+        ? (client['rating'] as num).toDouble()
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -98,46 +111,62 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(clientName,
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: TColor.textPrimary)),
+          Text(
+            clientName,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: TColor.textPrimary,
+            ),
+          ),
           const SizedBox(height: 4),
-          Row(children: _buildStars(rating)),
+          Row(
+            children: _buildStars(rating),
+          ),
           const SizedBox(height: 6),
-          Text(address,
-              style:
-              TextStyle(fontSize: 15, color: TColor.textPrimary)),
+          Text(
+            address,
+            style: TextStyle(
+              fontSize: 15,
+              color: TColor.textPrimary,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text('Start: $fmtTime',
-              style:
-              TextStyle(color: TColor.textSecondary, fontSize: 14)),
+          Text(
+            'Start: $fmtTime',
+            style: TextStyle(
+              color: TColor.textSecondary,
+              fontSize: 14,
+            ),
+          ),
           const SizedBox(height: 6),
           Chip(
             backgroundColor: status == 'finished'
                 ? Colors.green[100]
                 : Colors.orange[100],
-            label: Text(status,
-                style: TextStyle(
-                    color: status == 'finished'
-                        ? Colors.green
-                        : Colors.orange)),
+            label: Text(
+              status,
+              style: TextStyle(
+                color: status == 'finished' ? Colors.green : Colors.orange,
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              child: const Text('Details'),
               onPressed: () async {
                 final changed = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
-                      builder: (_) =>
-                          OrderDetailsScreen(orderId: id)),
+                    builder: (_) => OrderDetailsScreen(orderId: id),
+                  ),
                 );
-                if (changed == true) _fetchOrders();
+                if (changed == true) {
+                  _fetchOrders();
+                }
               },
+              child: const Text('Details'),
             ),
           ),
         ],
@@ -153,11 +182,11 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
     for (int i = 0; i < full; i++) {
       stars.add(const Icon(Icons.star, color: Colors.amber, size: 18));
     }
-    if (hasHalf)
+    if (hasHalf) {
       stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 18));
+    }
     while (stars.length < total) {
-      stars.add(const Icon(Icons.star_border,
-          color: Colors.amber, size: 18));
+      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 18));
     }
     return stars;
   }
