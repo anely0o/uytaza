@@ -1,5 +1,3 @@
-// lib/screen/history/history_screen.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -61,15 +59,19 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         onRefresh: _refresh,
         child: _orders.isEmpty
             ? ListView(
-          // нужен ListView, чтобы RefreshIndicator работал
+          // Wrap in ListView for RefreshIndicator to work
           children: [
             SizedBox(
-              height: MediaQuery.of(context).size.height * 0.6,
+              height:
+              MediaQuery.of(context).size.height * 0.6,
             ),
             Center(
               child: Text(
-                'У вас ещё нет назначенных заказов, можете отдыхать.',
-                style: TextStyle(color: TColor.textSecondary),
+                'You have no assigned orders yet, you can relax.',
+                style: TextStyle(
+                  color: TColor.textSecondary,
+                  fontSize: 16,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -78,28 +80,63 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
             : ListView.separated(
           padding: const EdgeInsets.all(20),
           itemCount: _orders.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 14),
+          separatorBuilder: (_, __) =>
+          const SizedBox(height: 14),
           itemBuilder: (_, i) => _orderCard(_orders[i]),
         ),
       ),
     );
   }
 
-  Widget _orderCard(Map<String, dynamic> order) {
-    final id       = order['_id']?.toString() ?? order['id'].toString();
-    final address  = order['address'] ?? '';
-    final status   = order['status'] ?? '';
-    final startIso = order['scheduled_at'] ?? order['start_time'] ?? '';
-    final startDt  = DateTime.tryParse(startIso);
-    final fmtTime  = startDt != null
-        ? DateFormat('dd MMM yyyy, HH:mm').format(startDt.toLocal())
-        : '';
+  /// For a given userId makes GET /api/users/{userId} and returns "First Name Last Name".
+  Future<String> _fetchUserName(String userId) async {
+    try {
+      final res =
+      await ApiService.getWithToken('${ApiRoutes.userById}/$userId');
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+        final first = decoded['first_name']?.toString() ?? '';
+        final last = decoded['last_name']?.toString() ?? '';
+        return (first + ' ' + last).trim();
+      }
+    } catch (_) {
+      // ignore errors
+    }
+    return ''; // if something went wrong, return empty string
+  }
 
-    final client   = order['client'] as Map<String, dynamic>? ?? {};
-    final clientName = '${client['first_name'] ?? ''} ${client['last_name'] ?? ''}'.trim();
-    final rating    = (client['rating'] != null)
-        ? (client['rating'] as num).toDouble()
-        : 0.0;
+  Widget _orderCard(Map<String, dynamic> order) {
+    // 1) Determine correct ID: first "_id", else "id"
+    final rawId = order['_id']?.toString() ?? order['id']?.toString() ?? '';
+    final orderId = rawId;
+
+    // 2) Extract client_id and cleaner_id[] list
+    final clientId = order['client_id']?.toString() ?? '';
+    final cleanerList = (order['cleaner_id'] as List<dynamic>?)
+        ?.map((c) => c.toString())
+        .toList() ??
+        [];
+
+    // 3) Address
+    final address = order['address']?.toString() ?? '—';
+
+    // 4) Service Type
+    final serviceType = (order['service_type'] as String?)?.isNotEmpty == true
+        ? order['service_type']!
+        : '—';
+
+    // 5) Date ("date")
+    final dateIso = order['date']?.toString() ?? '';
+    final dateDt = DateTime.tryParse(dateIso);
+    final dateStr = dateDt != null
+        ? DateFormat('dd.MM.yyyy, HH:mm').format(dateDt.toLocal())
+        : '—';
+
+    // 6) Status
+    final statusRaw = order['status']?.toString() ?? '';
+    final statusCapitalized = statusRaw.isNotEmpty
+        ? statusRaw[0].toUpperCase() + statusRaw.substring(1)
+        : 'Unknown';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -111,55 +148,155 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            clientName,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: TColor.textPrimary,
-            ),
+          // Client name instead of Client ID (async via FutureBuilder)
+          FutureBuilder<String>(
+            future: clientId.isNotEmpty ? _fetchUserName(clientId) : Future.value('—'),
+            builder: (context, snapshot) {
+              final name = snapshot.connectionState == ConnectionState.done &&
+                  (snapshot.data?.isNotEmpty ?? false)
+                  ? snapshot.data!
+                  : (snapshot.connectionState == ConnectionState.waiting
+                  ? 'Loading…'
+                  : '—');
+              return Row(
+                children: [
+                  const Icon(Icons.person, size: 18, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Client: $name',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: TColor.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
+
+          // Cleaner names (if any) instead of cleaner_id[]
+          if (cleanerList.isNotEmpty) ...[
+            FutureBuilder<List<String>>(
+              future: Future.wait(cleanerList.map((id) => _fetchUserName(id))),
+              builder: (context, snapshot) {
+                Widget child;
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  child = Row(
+                    children: const [
+                      Icon(Icons.cleaning_services, size: 18, color: Colors.grey),
+                      SizedBox(width: 6),
+                      Text('Loading cleaners…'),
+                    ],
+                  );
+                } else if (snapshot.hasError || snapshot.data == null) {
+                  child = Row(
+                    children: [
+                      const Icon(Icons.cleaning_services, size: 18, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Cleaners: —',
+                        style: TextStyle(fontSize: 14, color: TColor.textSecondary),
+                      ),
+                    ],
+                  );
+                } else {
+                  final names = snapshot.data!
+                      .where((n) => n.isNotEmpty)
+                      .join(', ');
+                  child = Row(
+                    children: [
+                      const Icon(Icons.cleaning_services, size: 18, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Cleaners: ${names.isNotEmpty ? names : '—'}',
+                          style: TextStyle(fontSize: 14, color: TColor.textPrimary),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return child;
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // Address
           Row(
-            children: _buildStars(rating),
+            children: [
+              const Icon(Icons.location_on, size: 18, color: Colors.grey),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  address,
+                  style: TextStyle(fontSize: 14, color: TColor.textPrimary),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            address,
-            style: TextStyle(
-              fontSize: 15,
-              color: TColor.textPrimary,
-            ),
+          const SizedBox(height: 8),
+
+          // Service Type
+          Row(
+            children: [
+              const Icon(Icons.cleaning_services, size: 18, color: Colors.grey),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Type: $serviceType',
+                  style: TextStyle(fontSize: 14, color: TColor.textPrimary),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Start: $fmtTime',
-            style: TextStyle(
-              color: TColor.textSecondary,
-              fontSize: 14,
-            ),
+          const SizedBox(height: 8),
+
+          // Date
+          Row(
+            children: [
+              const Icon(Icons.access_time, size: 18, color: Colors.grey),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  dateStr,
+                  style: TextStyle(fontSize: 14, color: TColor.textSecondary),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
+
+          // Status
           Chip(
-            backgroundColor: status == 'finished'
-                ? Colors.green[100]
-                : Colors.orange[100],
+            backgroundColor:
+            statusRaw == 'finished' ? Colors.green[100] : Colors.orange[100],
             label: Text(
-              status,
+              statusCapitalized,
               style: TextStyle(
-                color: status == 'finished' ? Colors.green : Colors.orange,
+                color: statusRaw == 'finished' ? Colors.green : Colors.orange,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
           const SizedBox(height: 12),
+
+          // Details button
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () async {
+                if (orderId.isEmpty) {
+                  _fetchOrders();
+                  return;
+                }
                 final changed = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => OrderDetailsScreen(orderId: id),
+                    builder: (_) => OrderDetailsScreen(orderId: orderId),
                   ),
                 );
                 if (changed == true) {
@@ -172,22 +309,5 @@ class _CleanerOrdersScreenState extends State<CleanerOrdersScreen> {
         ],
       ),
     );
-  }
-
-  List<Widget> _buildStars(double rating) {
-    const total = 5;
-    int full = rating.floor();
-    bool hasHalf = (rating - full) >= 0.5;
-    List<Widget> stars = [];
-    for (int i = 0; i < full; i++) {
-      stars.add(const Icon(Icons.star, color: Colors.amber, size: 18));
-    }
-    if (hasHalf) {
-      stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 18));
-    }
-    while (stars.length < total) {
-      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 18));
-    }
-    return stars;
   }
 }

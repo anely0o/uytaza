@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
@@ -18,10 +16,12 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   bool _loading = true;
   String? _error;
+
   Map<String, dynamic>? _order;
 
-  File? _pickedImage;
-  final _picker = ImagePicker();
+  // Instead of raw IDs, we'll store ready names
+  String? _clientName;
+  List<String> _cleanerNames = [];
 
   @override
   void initState() {
@@ -33,15 +33,51 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _order = null;
+      _clientName = null;
+      _cleanerNames = [];
     });
 
     try {
-      final res = await ApiService.getWithToken('${ApiRoutes.cleanerOrder}${widget.orderId}');
+      // 1) First get order details
+      final res = await ApiService.getWithToken(
+        '${ApiRoutes.cleanerOrder}/${widget.orderId}',
+      );
       if (res.statusCode == 200) {
-        _order = jsonDecode(res.body) as Map<String, dynamic>;
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map<String, dynamic>) {
+          _order = decoded;
+        } else {
+          throw 'Invalid server response format';
+        }
       } else {
-        _error = 'HTTP ${res.statusCode}';
+        throw 'HTTP ${res.statusCode}';
       }
+
+      // 2) Extract client_id and cleaner_id[] from the JSON
+      final clientId = _order!['client_id']?.toString();
+      final cleaners = (_order!['cleaner_id'] as List<dynamic>?)
+          ?.map((c) => c.toString())
+          .toList() ??
+          [];
+
+      // 3) Simultaneous fetch of client name and cleaner names
+      final futures = <Future>[];
+
+      if (clientId != null && clientId.isNotEmpty) {
+        futures.add(_fetchUserName(clientId).then((name) {
+          _clientName = name;
+        }));
+      }
+
+      for (final cId in cleaners) {
+        futures.add(_fetchUserName(cId).then((name) {
+          if (name.isNotEmpty) _cleanerNames.add(name);
+        }));
+      }
+
+      // Wait for all requests to complete
+      await Future.wait(futures);
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -49,41 +85,26 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
-    final x = await _picker.pickImage(source: ImageSource.gallery);
-    if (x != null) setState(() => _pickedImage = File(x.path));
-  }
-
-  Future<void> _finish() async {
-    if (_pickedImage == null) {
-      _show('Please upload a photo first');
-      return;
-    }
-    setState(() => _loading = true);
-
+  /// Get user's first + last name by ID
+  Future<String> _fetchUserName(String userId) async {
     try {
-      final url = '${ApiRoutes.finishOrder}${widget.orderId}/finish';
-      final res = await ApiService.postMultipart(
-        url,
-        fileField: 'photo',
-        file: _pickedImage!,
-      );
+      final res = await ApiService.getWithToken('${ApiRoutes.userById}/$userId');
       if (res.statusCode == 200) {
-        _show('Order marked as finished');
-        // Сообщаем родителю, что статус изменился
-        Navigator.pop(context, true);
-      } else {
-        throw 'HTTP ${res.statusCode}';
+        final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+        final first = decoded['first_name']?.toString() ?? '';
+        final last = decoded['last_name']?.toString() ?? '';
+        return (first + ' ' + last).trim();
       }
-    } catch (e) {
-      _show('Failed: $e');
-      if (mounted) setState(() => _loading = false);
-    }
+    } catch (_) { }
+    return '';
   }
 
   @override
   Widget build(BuildContext context) {
-    final isFinished = _order?['status'] == 'finished';
+    final statusRaw = (_order?['status'] as String?)?.toLowerCase() ?? '';
+    final statusCapitalized = statusRaw.isNotEmpty
+        ? statusRaw[0].toUpperCase() + statusRaw.substring(1)
+        : '—';
 
     return Scaffold(
       backgroundColor: TColor.background,
@@ -101,142 +122,211 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : (_error != null
           ? Center(child: Text(_error!))
-          : _orderContent(),
-      floatingActionButton: !isFinished && _pickedImage != null
-          ? FloatingActionButton.extended(
-        onPressed: _finish,
-        backgroundColor: TColor.primary,
-        icon: const Icon(Icons.check, color: Colors.white),
-        label: const Text('Finish'),
-      )
-          : null,
+          : _buildDetailsCard(statusCapitalized)),
     );
   }
 
-  Widget _orderContent() {
-    final addr = _order?['address'] ?? '';
-    final status = _order?['status'] ?? '';
-    final extras = List<String>.from(_order?['extras'] ?? []);
-    final startIso = _order?['scheduled_at'] ?? _order?['start_time'];
-    final startDt = DateTime.tryParse(startIso ?? '');
-    final startFmt = startDt != null
-        ? DateFormat('dd MMM yyyy, HH:mm').format(startDt.toLocal())
-        : '';
+  Widget _buildDetailsCard(String statusCapitalized) {
+    // 1) Address
+    final address = _order?['address']?.toString() ?? '—';
 
-    return RefreshIndicator(
-      onRefresh: _loadOrder,
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _infoRow('Address', addr),
-          const SizedBox(height: 8),
-          _infoRow('Start', startFmt),
-          const SizedBox(height: 8),
-          _infoRow('Status', status),
-          const SizedBox(height: 18),
-          Text(
-            'Extras',
+    // 2) Service Type
+    final serviceType = (_order?['service_type'] as String?)?.isNotEmpty == true
+        ? _order!['service_type']!
+        : '—';
+
+    // 3) Cleaning date ("date")
+    final dateIso = _order?['date']?.toString();
+    String dateFmt = '—';
+    if (dateIso != null) {
+      final dateDt = DateTime.tryParse(dateIso);
+      if (dateDt != null) {
+        dateFmt = DateFormat('dd.MM.yyyy, HH:mm').format(dateDt.toLocal());
+      }
+    }
+
+    // 4) Comment
+    final comment = _order?['comment']?.toString() ?? '—';
+
+    // 5) Creation date ("created_at")
+    final createdIso = _order?['created_at']?.toString();
+    String createdFmt = '—';
+    if (createdIso != null) {
+      final createdDt = DateTime.tryParse(createdIso);
+      if (createdDt != null) {
+        createdFmt =
+            DateFormat('dd.MM.yyyy, HH:mm').format(createdDt.toLocal());
+      }
+    }
+
+    // 6) Service details (service_details: [ {id, name, price}, ... ])
+    final serviceDetailsList =
+        (_order?['service_details'] as List<dynamic>?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+            [];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: TColor.softShadow,
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            // "Basic Information" card
+            _sectionTitle('Basic Information'),
+            const SizedBox(height: 12),
+
+            // Client Name
+            _infoRow('Client', _clientName ?? '—'),
+            const SizedBox(height: 8),
+
+            // Cleaner(s)
+            if (_cleanerNames.isNotEmpty) ...[
+              _infoRow('Cleaner(s)', _cleanerNames.join(', ')),
+              const SizedBox(height: 8),
+            ],
+
+            // Address
+            _infoRow('Address', address),
+            const SizedBox(height: 8),
+
+            // Service Type
+            _infoRow('Service Type', serviceType),
+            const SizedBox(height: 8),
+
+            // Scheduled at
+            _infoRow('Scheduled at', dateFmt),
+            const SizedBox(height: 8),
+
+            // Status
+            _infoRow('Status', statusCapitalized),
+            const SizedBox(height: 8),
+
+            // Comment
+            _infoRow('Comment', comment),
+            const SizedBox(height: 8),
+
+            // Created at
+            _infoRow('Created at', createdFmt),
+
+            const SizedBox(height: 20),
+            Divider(color: TColor.divider),
+
+            const SizedBox(height: 20),
+            // "Service Details" section
+            if (serviceDetailsList.isNotEmpty) ...[
+              _sectionTitle('Service Details'),
+              const SizedBox(height: 12),
+              ...serviceDetailsList.map((sd) {
+                final name = sd['name']?.toString() ?? '—';
+                final price = sd['price'] is num
+                    ? (sd['price'] as num).toString()
+                    : '—';
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: TColor.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '$price ₸',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: TColor.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              const SizedBox(height: 20),
+              Divider(color: TColor.divider),
+            ],
+
+            const SizedBox(height: 20),
+            // "Mark as Finished" button if status != finished
+            _buildFinishSection(statusCapitalized),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFinishSection(String statusCapitalized) {
+    final isFinished = statusCapitalized.toLowerCase() == 'finished';
+    return isFinished
+        ? Center(
+      child: Text(
+        'This order is already finished.',
+        style: TextStyle(color: TColor.textSecondary),
+      ),
+    )
+        : Center(
+      child: ElevatedButton.icon(
+        onPressed: () {
+          // TODO: your "finish" logic here (UploadPhotoScreen or API call)
+        },
+        icon: const Icon(Icons.check, color: Colors.white),
+        label: const Text('Mark as Finished'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: TColor.primary,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) => Text(
+    title,
+    style: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+      color: TColor.textPrimary,
+    ),
+  );
+
+  Widget _infoRow(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: TColor.textPrimary,
+            fontSize: 14,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
             style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: TColor.textPrimary,
+              fontSize: 14,
+              color: TColor.textSecondary,
             ),
           ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            children: extras
-                .map((e) => Chip(
-              label: Text(e),
-              backgroundColor: TColor.primary.withOpacity(.1),
-              labelStyle: TextStyle(
-                color: TColor.textPrimary,
-                fontSize: 12,
-              ),
-            ))
-                .toList(),
-          ),
-          const SizedBox(height: 24),
-          _pickedImage == null ? _uploadPlaceholder() : _imagePreview(),
-        ],
-      ),
-    );
-  }
-
-  Widget _uploadPlaceholder() => GestureDetector(
-    onTap: _pickImage,
-    child: Container(
-      height: 180,
-      decoration: BoxDecoration(
-        border: Border.all(color: TColor.primary),
-        borderRadius: BorderRadius.circular(16),
-        color: TColor.primary.withOpacity(.05),
-      ),
-      child: Center(
-        child: Text(
-          'Tap to upload photo',
-          style: TextStyle(
-            color: TColor.primary,
-            fontWeight: FontWeight.w500,
-          ),
         ),
-      ),
+      ],
     ),
   );
-
-  Widget _imagePreview() => Stack(children: [
-    ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Image.file(
-        _pickedImage!,
-        width: double.infinity,
-        height: 180,
-        fit: BoxFit.cover,
-      ),
-    ),
-    Positioned(
-      top: 8,
-      right: 8,
-      child: InkWell(
-        onTap: () => setState(() => _pickedImage = null),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.black54,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.close, color: Colors.white),
-        ),
-      ),
-    ),
-  ]);
-
-  Widget _infoRow(String key, String value) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        '$key: ',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: TColor.textPrimary,
-        ),
-      ),
-      Expanded(
-        child: Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            color: TColor.textSecondary,
-          ),
-        ),
-      ),
-    ],
-  );
-
-  void _show(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
 }

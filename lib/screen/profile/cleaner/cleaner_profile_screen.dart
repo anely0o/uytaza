@@ -39,7 +39,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     });
 
     try {
-      // 1) Профиль текущего клинера
+      // 1) Current cleaner's profile
       final profileRes = await ApiService.getWithToken(ApiRoutes.profile);
       if (profileRes.statusCode != 200) {
         throw 'Error ${profileRes.statusCode}';
@@ -51,7 +51,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
       final cleanerId = (profileData['id'] ?? '').toString();
 
       if (cleanerId.isNotEmpty) {
-        // 2) Рейтинг, jobsDone, experienceYears
+        // 2) Rating, jobsDone, experienceYears
         final ratingRes = await ApiService.getWithToken('${ApiRoutes.ratingCleaner}$cleanerId');
         if (ratingRes.statusCode == 200) {
           final rd = jsonDecode(ratingRes.body) as Map<String, dynamic>;
@@ -60,7 +60,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           _experienceYears = (rd['experience_years'] ?? 0).toDouble();
         }
 
-        // 3) Отзывы
+        // 3) Reviews
         final reviewsRes = await ApiService.getWithToken('${ApiRoutes.reviewsCleaner}$cleanerId');
         if (reviewsRes.statusCode == 200) {
           final list = jsonDecode(reviewsRes.body) as List<dynamic>;
@@ -213,7 +213,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     if (_reviews.isEmpty) {
       return Center(
         child: Text(
-          'У вас пока нет отзывов',
+          'You have no reviews yet',
           style: TextStyle(color: TColor.textSecondary),
         ),
       );
@@ -222,7 +222,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Отзывы о ваших услугах',
+          'Reviews of your services',
           style: TextStyle(
             color: TColor.textPrimary,
             fontSize: 18,
@@ -293,7 +293,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
         const Divider(),
         ListTile(
           onTap: () {
-            // История заказа (может открывать тот же CleanerOrdersScreen)
+            // Order history (opens CleanerOrdersScreen)
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CleanerOrdersScreen()),
@@ -306,7 +306,6 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           ),
           trailing: Icon(Icons.chevron_right, color: TColor.textPrimary),
         ),
-
       ],
     );
   }

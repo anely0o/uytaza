@@ -3,15 +3,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/common/color_extension.dart';
+import 'package:uytaza/api/api_service.dart';
+import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/screen/models/order_model.dart';
 import 'package:uytaza/screen/models/subscription_model.dart';
 import 'package:uytaza/screen/order/client/order_edit_page.dart';
 import 'package:uytaza/screen/subscription/subscription_edit_page.dart';
 import 'package:uytaza/screen/profile/user_config.dart' show UserRole;
-
-import '../../api/api_routes.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -57,9 +56,9 @@ class _HistoryScreenState extends State<HistoryScreen>
     });
 
     try {
-      // 1) Загрузка заказов:
+      // 1) Load orders:
       final ordersEndpoint = _isCleaner
-          ? ApiRoutes.cleanerOrders // предполагаем, что этот endpoint отдаёт и завершённые
+          ? ApiRoutes.cleanerOrders // returns completed orders for cleaner
           : '/api/orders/my';
 
       final ordersRes = await ApiService.getWithToken(ordersEndpoint);
@@ -69,28 +68,31 @@ class _HistoryScreenState extends State<HistoryScreen>
       final List<dynamic> ordersJson = jsonDecode(ordersRes.body);
       final allOrders = ordersJson.map((e) => Order.fromJson(e)).toList();
 
-      // Фильтр для клинера: только статус "finished"
+      // Filter: for cleaner – only status "finished"
       if (_isCleaner) {
         _closedOrders =
             allOrders.where((o) => o.status.toLowerCase() == 'finished').toList();
       } else {
-        // Для клиента: "completed" или "cancelled"
+        // For client: "completed" or "cancelled"
         _closedOrders = allOrders.where((o) {
           final st = o.status.toLowerCase();
           return st == 'completed' || st == 'cancelled';
         }).toList();
       }
 
-      // 2) Загрузка подписок — только для клиента
+      // 2) Load subscriptions — only for client
       if (!_isCleaner) {
-        final subsRes = await ApiService.getWithToken('/api/subscriptions/my');
+        final subsRes =
+        await ApiService.getWithToken('/api/subscriptions/my');
         if (subsRes.statusCode != 200) {
           throw 'Subs HTTP ${subsRes.statusCode}';
         }
         final List<dynamic> subsJson = jsonDecode(subsRes.body);
-        final allSubs = subsJson.map((e) => Subscription.fromJson(e)).toList();
-        _cancelledSubs =
-            allSubs.where((s) => s.status.toLowerCase() == 'cancelled').toList();
+        final allSubs =
+        subsJson.map((e) => Subscription.fromJson(e)).toList();
+        _cancelledSubs = allSubs
+            .where((s) => s.status.toLowerCase() == 'cancelled')
+            .toList();
       }
 
       setState(() {
@@ -114,65 +116,64 @@ class _HistoryScreenState extends State<HistoryScreen>
   Widget _buildOrderTile(Order order) {
     final fmt = DateFormat('dd.MM.yyyy, HH:mm');
     final formattedDate = fmt.format(order.scheduledAt);
-    final serviceNames = order.serviceIds.join(', ');
 
-    final isCancelled = order.status.toLowerCase() == 'cancelled';
-    final isFinished = order.status.toLowerCase() == 'finished' ||
-        order.status.toLowerCase() == 'completed';
+    // Expecting that Order model now contains rating and reviews (List<String>).
+    final rating = order.rating ?? 0.0;
+    final reviews = order.reviews ?? <String>[];
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 3,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          'Services: $serviceNames',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Address: ${order.address}'),
-            Text('Date: $formattedDate'),
+            Text(
+              'Date: $formattedDate',
+              style: TextStyle(
+                  fontSize: 14, color: TColor.textSecondary),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
-                const Text('Status: ',
-                    style: TextStyle(fontWeight: FontWeight.w500)),
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isCancelled
-                        ? Colors.red[100]
-                        : (isFinished ? Colors.green[100] : Colors.grey[100]),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    order.status[0].toUpperCase() + order.status.substring(1),
-                    style: TextStyle(
-                      color: isCancelled
-                          ? Colors.red
-                          : (isFinished ? Colors.green : Colors.grey[700]),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                const Icon(Icons.star, size: 18, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(
+                  rating.toStringAsFixed(1),
+                  style: TextStyle(
+                      fontSize: 14, color: TColor.textPrimary),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            if (reviews.isEmpty)
+              Text(
+                'No reviews for this order.',
+                style:
+                TextStyle(color: TColor.textSecondary),
+              )
+            else ...[
+              Text(
+                'Reviews:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: TColor.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              ...reviews.map((r) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  '• $r',
+                  style: TextStyle(
+                      color: TColor.textSecondary),
+                ),
+              )),
+            ],
           ],
         ),
-        trailing: Icon(Icons.chevron_right, color: TColor.primary),
-        onTap: () {
-          // Открыть детали заказа. Если клинер, перейдёт в OrderEditPage.
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => OrderEditPage(orderId: order.id),
-            ),
-          ).then((_) => _loadHistory());
-        },
       ),
     );
   }
@@ -180,7 +181,8 @@ class _HistoryScreenState extends State<HistoryScreen>
   Widget _buildSubscriptionTile(Subscription s) {
     final fmt = DateFormat('dd.MM.yyyy');
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 3,
       child: ListTile(
@@ -198,11 +200,11 @@ class _HistoryScreenState extends State<HistoryScreen>
         ),
         trailing: Icon(Icons.chevron_right, color: TColor.primary),
         onTap: () {
-          // Открыть экран редактирования подписки
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => SubscriptionEditPage(subscription: s),
+              builder: (_) =>
+                  SubscriptionEditPage(subscription: s),
             ),
           ).then((_) => _loadHistory());
         },
@@ -218,7 +220,7 @@ class _HistoryScreenState extends State<HistoryScreen>
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          _isCleaner ? 'История заказов' : 'History',
+          _isCleaner ? 'Order History' : 'History',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -246,12 +248,13 @@ class _HistoryScreenState extends State<HistoryScreen>
         ),
       )
           : _isCleaner
-      // Клинер: только список завершённых заказов
-          ? _closedOrders.isEmpty
+      // Cleaner: only list of completed orders with rating and reviews
+          ? (_closedOrders.isEmpty
           ? Center(
         child: Text(
-          'У вас ещё нет заказов, завершённых.',
-          style: TextStyle(color: TColor.textSecondary),
+          'You have no completed orders yet.',
+          style:
+          TextStyle(color: TColor.textSecondary),
         ),
       )
           : RefreshIndicator(
@@ -262,18 +265,18 @@ class _HistoryScreenState extends State<HistoryScreen>
           itemBuilder: (_, i) =>
               _buildOrderTile(_closedOrders[i]),
         ),
-      )
-      // Клиент: два таба (заказы + подписки)
+      ))
+      // Client: two tabs (orders + subscriptions)
           : TabBarView(
         controller: _tabController,
         children: [
-          // 1) История заказов для клиента
+          // 1) Orders history for client
           _closedOrders.isEmpty
               ? Center(
             child: Text(
               'No closed orders.',
-              style:
-              TextStyle(color: TColor.textSecondary),
+              style: TextStyle(
+                  color: TColor.textSecondary),
             ),
           )
               : RefreshIndicator(
@@ -285,13 +288,13 @@ class _HistoryScreenState extends State<HistoryScreen>
                   _buildOrderTile(_closedOrders[i]),
             ),
           ),
-          // 2) История подписок для клиента
+          // 2) Subscriptions history for client
           _cancelledSubs.isEmpty
               ? Center(
             child: Text(
               'No cancelled subscriptions.',
-              style:
-              TextStyle(color: TColor.textSecondary),
+              style: TextStyle(
+                  color: TColor.textSecondary),
             ),
           )
               : RefreshIndicator(
@@ -300,7 +303,8 @@ class _HistoryScreenState extends State<HistoryScreen>
               padding: const EdgeInsets.all(12),
               itemCount: _cancelledSubs.length,
               itemBuilder: (_, i) =>
-                  _buildSubscriptionTile(_cancelledSubs[i]),
+                  _buildSubscriptionTile(
+                      _cancelledSubs[i]),
             ),
           ),
         ],

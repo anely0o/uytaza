@@ -7,10 +7,10 @@ import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/screen/order/client/order_success_page.dart';
 
 class PaymentPage extends StatefulWidget {
-  final String entityType; // Например: "order"
-  final String entityId;   // ID вашего заказа
-  final String? userId;    // Может приходить null, если мы будем брать из токена
-  final int amount;        // Сумма в тенге (int), должна быть > 0
+  final String entityType; // For example: "order"
+  final String entityId;   // Your order ID
+  final String? userId;    // May be null if we fetch it from the token
+  final int amount;        // Amount in tenge (int), must be > 0
 
   const PaymentPage({
     super.key,
@@ -32,7 +32,7 @@ class _PaymentPageState extends State<PaymentPage> {
   @override
   void initState() {
     super.initState();
-    // Если userId не передали в конструкторе, пытаемся получить из токена
+    // If userId wasn't passed into the constructor, try to get it from the token
     if (widget.userId == null || widget.userId!.isEmpty) {
       _extractUserIdFromToken();
     } else {
@@ -40,69 +40,69 @@ class _PaymentPageState extends State<PaymentPage> {
     }
   }
 
-  /// Попытка извлечь user_id из JWT-токена.
+  /// Attempt to extract user_id from the JWT token.
   Future<void> _extractUserIdFromToken() async {
     try {
-      // Здесь предполагаем, что ApiService.getToken() возвращает вашу JWT-строку.
-      // Если в вашем ApiService другой метод – замените на него.
+      // Assume ApiService.getToken() returns your raw JWT string.
+      // If your ApiService uses a different method, replace it accordingly.
       final rawToken = await ApiService.getToken();
       if (rawToken == null || rawToken.isEmpty) {
         setState(() {
-          _error = 'JWT-токен не найден';
+          _error = 'JWT token not found';
         });
         return;
       }
       final parts = rawToken.split('.');
       if (parts.length != 3) {
         setState(() {
-          _error = 'Неверный формат JWT-токена';
+          _error = 'Invalid JWT token format';
         });
         return;
       }
-      // Берём среднюю часть (payload), декодируем из Base64Url → JSON → Map
+      // Take the middle part (payload), decode from Base64Url → JSON → Map
       final payloadBase64 = parts[1];
-      // Важно: выравниваем Base64Url (дополняем “=”, если нужно)
+      // Important: normalize Base64Url (add "=" padding if needed)
       String normalized = base64Url.normalize(payloadBase64);
       final payloadBytes = base64Url.decode(normalized);
       final Map<String, dynamic> payloadMap = jsonDecode(utf8.decode(payloadBytes));
 
-      // Обычно в JWT поле с user ID называется "sub" или "user_id" – уточните у бэкенда.
-      // Здесь проверим разные варианты:
+      // Typically the user ID field in JWT is called "sub" or "user_id"—confirm with your backend.
+      // Here we check various possible keys:
       final maybeId = (payloadMap['user_id'] ??
           payloadMap['sub'] ??
           payloadMap['id'])?.toString();
 
       if (maybeId == null || maybeId.isEmpty) {
         setState(() {
-          _error = 'Не удалось извлечь user_id из токена';
+          _error = 'Failed to extract user_id from token';
         });
         return;
       }
 
-      // Всё получилось:
+      // Success:
       setState(() {
         _resolvedUserId = maybeId;
       });
     } catch (e) {
       setState(() {
-        _error = 'Ошибка извлечения user_id из токена: $e';
+        _error = 'Error extracting user_id from token: $e';
       });
     }
   }
 
   Future<void> _doPayment() async {
-    // 1) Проверяем, что сумма > 0
+    // 1) Check that amount > 0
     if (widget.amount <= 0) {
       setState(() {
-        _error = 'Сумма должна быть больше нуля';
+        _error = 'Amount must be greater than zero';
       });
       return;
     }
 
-    // 2) Убедимся, что у нас есть user_id
+    // 2) Ensure we have a user_id
     if (_resolvedUserId == null || _resolvedUserId!.isEmpty) {
       setState(() {
-        _error = 'Идёт поиск user_id... Подождите';
+        _error = 'Looking up user_id... Please wait';
       });
       return;
     }
@@ -120,17 +120,17 @@ class _PaymentPageState extends State<PaymentPage> {
     };
 
     try {
-      // 3) Отправляем запрос на "/api/payments"
+      // 3) Send request to "/api/payments"
       final res = await ApiService.postWithToken('/api/payments', body);
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        // Успешно, переходим на страницу успеха
+        // Success, navigate to the success page
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const OrderSuccessPage()),
         );
       } else {
-        // 4) Если сервер вернул ошибку, пытаемся распарсить JSON либо показать "сырой" текст
+        // 4) If server returned an error, try to parse JSON or show raw text
         String serverMessage;
         try {
           final decoded = jsonDecode(res.body);
@@ -142,7 +142,7 @@ class _PaymentPageState extends State<PaymentPage> {
       }
     } catch (e) {
       setState(() {
-        _error = 'Ошибка платежа: $e';
+        _error = 'Payment error: $e';
       });
     } finally {
       setState(() {
@@ -168,7 +168,7 @@ class _PaymentPageState extends State<PaymentPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Карточка с информацией о платеже
+            // Card with payment information
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -219,7 +219,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
             const SizedBox(height: 30),
 
-            // Показ ошибки, если она есть
+            // Show error message if present
             if (_error != null) ...[
               Text(
                 _error!,
@@ -231,11 +231,11 @@ class _PaymentPageState extends State<PaymentPage> {
 
             const Spacer(),
 
-            // Если user_id ещё не определён, показываем круговую загрузку
+            // If user_id is still being fetched, show a loading indicator
             if (_resolvedUserId == null)
               const Center(child: CircularProgressIndicator()),
 
-            // Если user_id есть – отображаем кнопку "Pay Now"
+            // If user_id is available – show "Pay Now" button
             if (_resolvedUserId != null)
               SizedBox(
                 height: 52,

@@ -25,7 +25,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
   String selectedType = 'custom';
   final Set<String> selectedServiceIds = {};
   DateTime selectedDate = DateTime.now();
-  TimeOfDay selectedTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
 
   List<CleaningService> services = [];
   double totalPrice = 0;
@@ -67,14 +67,15 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     _loadProfileAddress();
   }
 
+  /// Загружает список доступных услуг
   Future<void> _loadServices() async {
     try {
       final res = await ApiService.getWithToken(ApiRoutes.services);
       if (res.statusCode == 200) {
         final list = jsonDecode(res.body) as List<dynamic>;
         services = list
-            .map((e) =>
-            CleaningService.fromJson(Map<String, dynamic>.from(e)))
+            .map((e) => CleaningService.fromJson(
+            Map<String, dynamic>.from(e)))
             .toList();
       } else {
         _showError('Services HTTP ${res.statusCode}');
@@ -86,11 +87,13 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     }
   }
 
+  /// Загружает сохранённый адрес из профиля
   Future<void> _loadProfileAddress() async {
     _profileAddress = await ProfileApi.fetchAddress();
     if (mounted) setState(() => loadingProfile = false);
   }
 
+  /// Объединяет дату и время в один объект DateTime
   DateTime _combineDateTime() => DateTime(
     selectedDate.year,
     selectedDate.month,
@@ -99,25 +102,31 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     selectedTime.minute,
   );
 
+  /// Форматирует в ISO-строку (с Z)
   String _backendDate(DateTime dtUtc) {
     final utc = dtUtc.toUtc();
     final core = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(utc);
     return '$core' + 'Z';
   }
 
+  /// Пересчитывает итоговую сумму, складывая цены выбранных услуг
   void _recalcTotal() {
     totalPrice = services
         .where((s) => selectedServiceIds.contains(s.id))
         .fold(0.0, (sum, s) => sum + s.price);
   }
 
+  /// Включает/выключает услугу по ID
   void _toggleService(String id) {
     setState(() {
-      if (!selectedServiceIds.add(id)) selectedServiceIds.remove(id);
+      if (!selectedServiceIds.add(id)) {
+        selectedServiceIds.remove(id);
+      }
       _recalcTotal();
     });
   }
 
+  /// Открывает диалог выбора адреса (профиль или карта)
   Future<void> _pickAddress() async {
     if (loadingProfile) return;
 
@@ -143,8 +152,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
                 final addr = await Navigator.push<String>(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const ChooseAddressScreen(),
-                  ),
+                      builder: (_) => const ChooseAddressScreen()),
                 );
                 Navigator.pop(context, addr);
               },
@@ -159,6 +167,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     }
   }
 
+  /// Создаёт заказ на сервере, отправляя полный JSON
   Future<void> _createOrder() async {
     if (addressCtl.text.trim().isEmpty) {
       _showError('Address required');
@@ -171,7 +180,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
 
     setState(() => submitting = true);
 
-    final body = {
+    final body = <String, dynamic>{
       "address": addressCtl.text.trim(),
       "service_ids": selectedServiceIds.toList(),
       "service_type": selectedType,
@@ -180,11 +189,12 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     };
 
     try {
-      final res = await ApiService.postWithToken(ApiRoutes.orders, body);
+      final res =
+      await ApiService.postWithToken(ApiRoutes.orders, body);
       if (res.statusCode == 201) {
-        final Map<String, dynamic> orderJson = res.body.isNotEmpty
+        final orderJson = res.body.isNotEmpty
             ? Map<String, dynamic>.from(jsonDecode(res.body))
-            : {};
+            : <String, dynamic>{};
         await _onOrderSuccess(orderJson);
       } else {
         final map = res.body.isNotEmpty
@@ -199,9 +209,12 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     }
   }
 
-  Future<void> _onOrderSuccess(Map<String, dynamic> orderJson) async {
+  /// После успешного создания заказа спрашиваем про подписку или оплату
+  Future<void> _onOrderSuccess(
+      Map<String, dynamic> orderJson) async {
     if (!mounted) return;
 
+    // Предлагаем подписку
     final repeat = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -221,9 +234,9 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       ),
     );
 
-    if (repeat == true) {
-      // НОВЫЙ ВАРИАНТ — передаём только строку с ID заказа:
-      final orderId = orderJson['id']?.toString() ?? '';
+    final orderId = orderJson['id']?.toString() ?? '';
+    if (repeat == true && orderId.isNotEmpty) {
+      // Переходим на создание подписки, передав только ID заказа
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -234,8 +247,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       return;
     }
 
-    // Если пользователь не захотел подписку — идём на оплату:
-    final orderId = orderJson['id']?.toString() ?? '';
+    // Иначе – сразу на оплату
     final userId = orderJson['user_id']?.toString() ?? '';
     final amount = (orderJson['total_price'] is num)
         ? (orderJson['total_price'] as num).toInt()
@@ -254,6 +266,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     );
   }
 
+  /// Показывает Snackbar с ошибкой
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -337,7 +350,9 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
           child: TextField(
             controller: addressCtl,
             decoration: InputDecoration(
-              hintText: loadingProfile ? 'Loading...' : 'Tap to select address',
+              hintText: loadingProfile
+                  ? 'Loading...'
+                  : 'Tap to select address',
               suffixIcon: const Icon(Icons.location_on_outlined),
               fillColor: TColor.background,
               filled: true,
@@ -533,7 +548,8 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
     for (int day = 1; day <= daysCount; day++) {
       final cur = DateTime(selectedDate.year, selectedDate.month, day);
       final sel = selectedDate.day == day;
-      final past = cur.isBefore(DateTime.now().subtract(const Duration(days: 1)));
+      final past = cur.isBefore(
+          DateTime.now().subtract(const Duration(days: 1)));
 
       currentRow.add(Expanded(
         child: GestureDetector(
@@ -624,19 +640,21 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       const SizedBox(height: 10),
       GestureDetector(
         onTap: () async {
-          final t =
-          await showTimePicker(context: context, initialTime: selectedTime);
+          final t = await showTimePicker(
+              context: context, initialTime: selectedTime);
           if (t != null) setState(() => selectedTime = t);
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding: const EdgeInsets.symmetric(
+              vertical: 14, horizontal: 16),
           decoration: BoxDecoration(
             color: TColor.background,
             border: Border.all(color: TColor.divider),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 selectedTime.format(context),
@@ -657,7 +675,8 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
       const SizedBox(height: 10),
       Text(
         'Total: ${totalPrice.toStringAsFixed(0)} ₸',
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+            fontSize: 18, fontWeight: FontWeight.bold),
       ),
     ],
   );
@@ -693,7 +712,7 @@ class _OrderBuildPageState extends State<OrderBuildPage> {
   );
 }
 
-// Класс для типа уборки
+/// Класс для типа уборки
 class _CleaningType {
   final String key;
   final String label;
