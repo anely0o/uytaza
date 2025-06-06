@@ -26,6 +26,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
   String _statusFilter = 'all';
   DateTime? _dateFilter;
 
+  // Геймификация
+  int _currentLevel = 0;
+  int _xpTotal = 0;
+
   @override
   void initState() {
     super.initState();
@@ -34,7 +38,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   Future<void> _init() async {
     await _fetchServices();
+    await _fetchGamification();
     await _fetchOrders();
+  }
+
+  Future<void> _fetchGamification() async {
+    try {
+      final res = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+      if (res.statusCode == 200) {
+        final sd = jsonDecode(res.body) as Map<String, dynamic>;
+        setState(() {
+          _currentLevel = (sd['current_level'] as num).toInt();
+          _xpTotal = (sd['xp_total'] as num).toInt();
+        });
+      }
+    } catch (_) {
+      // Игнорируем ошибки геймификации
+    }
   }
 
   Future<void> _fetchServices() async {
@@ -90,15 +110,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
-  /// Список только _активных_ заказов (все, кроме completed/cancelled)
   List<Order> get _filteredOrders {
     final nowAll = _orders.where((order) {
-      // Пропускаем закрытые (completed, cancelled)
       final st = order.status.toLowerCase();
       return st != 'completed' && st != 'cancelled';
     }).toList();
 
-    // Применяем фильтр по статусу/дате
     return nowAll.where((order) {
       final matchesStatus = (_statusFilter == 'all') ||
           (order.status.toLowerCase() == _statusFilter);
@@ -111,27 +128,44 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Рассчитываем прогресс внутри текущего уровня (100 XP на уровень)
+    final xpForCurrentLevel = _xpTotal % 100;
+    final progress = xpForCurrentLevel / 100.0;
+
     final filteredOrders = _filteredOrders;
 
     return Scaffold(
       backgroundColor: TColor.background,
-
-      // AppBar без кнопки “Добавить”
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        title: Text(
-          'Your Orders',
-          style: TextStyle(
-            color: TColor.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+        // Вместо простого Text, теперь Column с названием и прогресс-баром
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Level $_currentLevel   •   XP $xpForCurrentLevel/100',
+              style: TextStyle(
+                color: TColor.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Обрезаем углы прогресс-бара
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: TColor.divider,
+                color: TColor.primary,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
         iconTheme: IconThemeData(color: TColor.primary),
       ),
-
-      // FAB для создания нового заказа
       floatingActionButton: FloatingActionButton(
         backgroundColor: TColor.primary,
         child: const Icon(Icons.add, color: Colors.white),
@@ -145,7 +179,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
           }
         },
       ),
-
       body: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -166,56 +199,39 @@ class _OrdersScreenState extends State<OrdersScreen> {
         )
             : Column(
           children: [
-            // Строка фильтров: Статус + Дата
+            // Фильтры: статус + дата
             Row(
               children: [
-                // Статус
                 DropdownButton<String>(
                   value: _statusFilter,
-                  items: [
-                    const DropdownMenuItem(
-                      value: 'all',
-                      child: Text('All'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'pending',
-                      child: Text('Pending'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'paid',
-                      child: Text('Paid'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'assigned',
-                      child: Text('Assigned'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'processing',
-                      child: Text('Processing'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'completed',
-                      child: Text('Completed'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'cancelled',
-                      child: Text('Cancelled'),
-                    ),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('All')),
+                    DropdownMenuItem(
+                        value: 'pending', child: Text('Pending')),
+                    DropdownMenuItem(
+                        value: 'paid', child: Text('Paid')),
+                    DropdownMenuItem(
+                        value: 'assigned', child: Text('Assigned')),
+                    DropdownMenuItem(
+                        value: 'processing',
+                        child: Text('Processing')),
+                    DropdownMenuItem(
+                        value: 'completed', child: Text('Completed')),
+                    DropdownMenuItem(
+                        value: 'cancelled', child: Text('Cancelled')),
                   ],
                   onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _statusFilter = val);
-                    }
+                    if (val != null) setState(() => _statusFilter = val);
                   },
                 ),
                 const SizedBox(width: 16),
-                // Дата
                 TextButton.icon(
                   icon: Icon(Icons.date_range, color: TColor.primary),
                   label: Text(
                     _dateFilter == null
                         ? "Pick date"
-                        : DateFormat('yyyy-MM-dd').format(_dateFilter!),
+                        : DateFormat('yyyy-MM-dd')
+                        .format(_dateFilter!),
                     style: TextStyle(color: TColor.primary),
                   ),
                   onPressed: () async {
@@ -238,8 +254,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
             const SizedBox(height: 10),
-
-            // Список активных заказов
             Expanded(
               child: filteredOrders.isEmpty
                   ? Center(
@@ -255,14 +269,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 itemCount: filteredOrders.length,
                 itemBuilder: (context, index) {
                   final order = filteredOrders[index];
-                  final formattedDate = DateFormat(
-                      'dd MMM yyyy, HH:mm')
+                  final formattedDate =
+                  DateFormat('dd MMM yyyy, HH:mm')
                       .format(order.scheduledAt);
                   final serviceNames = order.serviceIds
                       .map((id) =>
                   _serviceNames[id] ?? id.toString())
                       .join(', ');
-
                   final isPending =
                       order.status.toLowerCase() == 'pending';
 
@@ -292,18 +305,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Text(
-                                'Status: ',
-                                style: TextStyle(
-                                    fontWeight:
-                                    FontWeight.w500),
-                              ),
+                              const Text('Status: ',
+                                  style: TextStyle(
+                                      fontWeight:
+                                      FontWeight.w500)),
                               Container(
                                 padding:
                                 const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
+                                    horizontal: 10,
+                                    vertical: 4),
                                 decoration: BoxDecoration(
                                   color: order.status ==
                                       'completed'
@@ -328,12 +338,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ),
                           if (isPending) ...[
                             const SizedBox(height: 6),
-                            Text(
+                            const Text(
                               'Please pay for order',
                               style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.w600,
-                              ),
+                                  color: Colors.red,
+                                  fontWeight:
+                                  FontWeight.w600),
                             ),
                           ],
                           const SizedBox(height: 10),
@@ -356,11 +366,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                     _fetchOrders();
                                   }
                                 },
-                                child: Text(
-                                  "Edit",
-                                  style: TextStyle(
-                                      color: TColor.primary),
-                                ),
+                                child: Text("Edit",
+                                    style: TextStyle(
+                                        color:
+                                        TColor.primary)),
                               ),
                               TextButton(
                                 onPressed: () async {
@@ -393,14 +402,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                     ),
                                   );
                                   if (confirmed == true) {
-                                    await _deleteOrder(order.id);
+                                    await _deleteOrder(
+                                        order.id);
                                   }
                                 },
-                                child: const Text(
-                                  "Delete",
-                                  style: TextStyle(
-                                      color: Colors.red),
-                                ),
+                                child: const Text("Delete",
+                                    style: TextStyle(
+                                        color: Colors.red)),
                               ),
                             ],
                           )

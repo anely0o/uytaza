@@ -1,9 +1,7 @@
 // lib/screen/support/ticket_chat_screen.dart
 
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/common/color_extension.dart';
 
@@ -24,7 +22,6 @@ class TicketChatScreen extends StatefulWidget {
 class _TicketChatScreenState extends State<TicketChatScreen> {
   final TextEditingController _msgController = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
-  File? _selectedImage;
   bool _sending = false;
   bool _loading = true;
   List<Map<String, dynamic>> _messages = [];
@@ -52,11 +49,7 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as List<dynamic>;
-        _messages = data
-            .whereType<Map<String, dynamic>>()
-            .toList();
-      } else {
-        // Если сервер вернул ошибку — оставим _messages как есть
+        _messages = data.whereType<Map<String, dynamic>>().toList();
       }
     } catch (_) {
       // Игнорируем сетевые ошибки
@@ -64,17 +57,16 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
       setState(() {
         _loading = false;
       });
-      // После загрузки — прокрутить список вниз
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
       });
     }
   }
 
-  /// Отправляет новое сообщение (текст + опционально картинку)
+  /// Отправляет новое сообщение (только текст)
   Future<void> _sendMessage() async {
     final msg = _msgController.text.trim();
-    if (msg.isEmpty && _selectedImage == null) return;
+    if (msg.isEmpty) return;
 
     setState(() {
       _sending = true;
@@ -83,28 +75,13 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
     final body = {'text': msg};
 
     try {
-      late final dynamic res;
-      if (_selectedImage == null) {
-        // Отправляем только текст
-        res = await ApiService.postWithToken(
-          '/api/support/tickets/${widget.ticketId}/messages',
-          body,
-        );
-      } else {
-        // Отправляем картинку + текстовые поля
-        res = await ApiService.postMultipart(
-          '/api/support/tickets/${widget.ticketId}/messages',
-          fileField: 'image',
-          file: _selectedImage!,
-          fields: body.map((k, v) => MapEntry(k, v.toString())),
-        );
-      }
+      final res = await ApiService.postWithToken(
+        '/api/support/tickets/${widget.ticketId}/messages',
+        body,
+      );
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        // Успешно отправлено — сбросить поля ввода
         _msgController.clear();
-        _selectedImage = null;
-        // Перезагрузить все сообщения
         await _loadMessages();
       } else {
         throw 'Message send failed (${res.statusCode})';
@@ -116,16 +93,6 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
     } finally {
       setState(() {
         _sending = false;
-      });
-    }
-  }
-
-  /// Открывает галерею для выбора картинки
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _selectedImage = File(picked.path);
       });
     }
   }
@@ -143,15 +110,28 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
 
   /// Рисует отдельный «пузырёк» для одного сообщения
   Widget _buildMessage(Map<String, dynamic> msg) {
-    final senderRole = (msg['sender'] as String?) ?? '';
-    // Предположим, что "client" - это клиент, все остальные - поддержка
-    final isClient = senderRole.toLowerCase() == 'client';
-
+    final senderRole = ((msg['sender'] as String?) ?? '').toLowerCase();
     final text = msg['text'] as String? ?? '';
-    final imageUrl = msg['image_url'] as String?;
 
-    // Скругления: у клиента скругляем нижний левый угол (пузырёк с правой стороны)
-    final borderRadius = isClient
+    // Определяем выравнивание: пользователь (user) — справа, остальные — слева
+    final isUser = senderRole == 'user';
+    final alignment =
+    isUser ? Alignment.centerRight : Alignment.centerLeft;
+
+    // Выбираем цвет фона в зависимости от роли
+    Color backgroundColor;
+    Color textColor;
+    if (senderRole == 'manager' || senderRole == 'admin') {
+      backgroundColor = Colors.yellow.shade200;
+      textColor = Colors.black87;
+    } else {
+      // user и cleaner — белый фон
+      backgroundColor = Colors.white;
+      textColor = TColor.textPrimary;
+    }
+
+    // Скругления: у пользователя скругляем нижний левый угол (пузырёк с правой стороны)
+    final borderRadius = isUser
         ? const BorderRadius.only(
       topLeft: Radius.circular(16),
       topRight: Radius.circular(16),
@@ -165,19 +145,33 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
       bottomRight: Radius.circular(16),
     );
 
+    // Формируем подпись: 'You' для пользователя, иначе название роли с заглавной буквы
+    String roleLabel;
+    if (senderRole == 'user') {
+      roleLabel = 'You';
+    } else if (senderRole == 'cleaner') {
+      roleLabel = 'Cleaner';
+    } else if (senderRole == 'manager') {
+      roleLabel = 'Manager';
+    } else if (senderRole == 'admin') {
+      roleLabel = 'Admin';
+    } else {
+      // На всякий случай, если придёт неизвестная роль
+      roleLabel =
+      senderRole.isNotEmpty ? '${senderRole[0].toUpperCase()}${senderRole.substring(1)}' : '';
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Align(
-        alignment: isClient ? Alignment.centerRight : Alignment.centerLeft,
+        alignment: alignment,
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isClient
-                  ? TColor.primary.withOpacity(0.9)
-                  : TColor.background,
+              color: backgroundColor,
               borderRadius: borderRadius,
               boxShadow: TColor.softShadow,
             ),
@@ -185,36 +179,24 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Если у сообщения есть текст — показываем его
                 if (text.isNotEmpty)
                   Text(
                     text,
                     style: TextStyle(
-                      color: isClient ? Colors.white : TColor.textPrimary,
+                      color: textColor,
                       fontSize: 14,
                     ),
                   ),
-                // Если есть картинка — показываем картинку
-                if (imageUrl != null) ...[
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ],
-                // Можно добавить timestamp или метку «Client» / «Support»
                 const SizedBox(height: 4),
                 Align(
-                  alignment:
-                  isClient ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: isUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Text(
-                    isClient ? 'You' : 'Support',
+                    roleLabel,
                     style: TextStyle(
                       fontSize: 10,
-                      color: isClient ? Colors.white70 : TColor.textSecondary,
+                      color: textColor.withOpacity(0.7),
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -250,12 +232,12 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
               controller: _scrollCtrl,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
               itemCount: _messages.length,
               itemBuilder: (_, i) => _buildMessage(_messages[i]),
             ),
           ),
-          // Поле ввода сообщения + кнопки
           Padding(
             padding: EdgeInsets.fromLTRB(
               16,
@@ -265,13 +247,6 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
             ),
             child: Row(
               children: [
-                // Кнопка прикрепить файл (картинку)
-                IconButton(
-                  icon: Icon(Icons.attach_file, color: TColor.primary),
-                  onPressed: _pickImage,
-                ),
-                const SizedBox(width: 8),
-                // Само текстовое поле + кнопка отправить
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
@@ -279,16 +254,17 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: TColor.softShadow,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     child: Row(
                       children: [
-                        // Поле ввода текста
                         Expanded(
                           child: TextField(
                             controller: _msgController,
                             decoration: InputDecoration(
                               hintText: 'Type your message...',
-                              hintStyle: TextStyle(color: TColor.placeholder),
+                              hintStyle:
+                              TextStyle(color: TColor.placeholder),
                               border: InputBorder.none,
                             ),
                             onSubmitted: (_) {
@@ -296,49 +272,6 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
                             },
                           ),
                         ),
-                        // Если выбрана картинка — показываем маленький предпросмотр
-                        if (_selectedImage != null) ...[
-                          const SizedBox(width: 8),
-                          Stack(
-                            alignment: Alignment.topRight,
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: TColor.divider),
-                                ),
-                                clipBehavior: Clip.hardEdge,
-                                child: Image.file(
-                                  _selectedImage!,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              // Крестик, чтобы убрать прикреплённую картинку
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedImage = null;
-                                  });
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  padding: const EdgeInsets.all(2),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        // Кнопка «отправить»
                         IconButton(
                           icon: Icon(Icons.send, color: TColor.primary),
                           onPressed: _sending ? null : _sendMessage,

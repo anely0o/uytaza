@@ -2,10 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
-
+import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/screen/profile/settings_screen.dart';
-
-
 import 'choose_address_screen.dart';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -32,6 +30,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   final List<String> _genders = ['male', 'female', 'other'];
 
   Map<String, dynamic> _initialData = {};
+  int _currentLevel = 0;
+  int _xpTotal = 0;
 
   @override
   void initState() {
@@ -50,21 +50,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         setState(() {
           _initialData = Map<String, dynamic>.from(data);
-          _emailController.text =
-              data['Email'] ?? data['email'] ?? '';
+          _emailController.text = data['Email'] ?? data['email'] ?? '';
           _firstNameController.text =
               data['FirstName'] ?? data['first_name'] ?? '';
           _lastNameController.text =
               data['LastName'] ?? data['last_name'] ?? '';
           _phoneController.text =
               data['PhoneNumber'] ?? data['phone_number'] ?? '';
-          _addressController.text =
-              data['Address'] ?? data['address'] ?? '';
-          _roleController.text =
-              data['Role'] ?? data['role'] ?? 'Client';
+          _addressController.text = data['Address'] ?? data['address'] ?? '';
+          _roleController.text = data['Role'] ?? data['role'] ?? 'Client';
 
-          String dob =
-              data['DateOfBirth'] ?? data['date_of_birth'] ?? '';
+          String dob = data['DateOfBirth'] ?? data['date_of_birth'] ?? '';
           if (dob.isNotEmpty) {
             dob = dob.split('T')[0];
             if (dob == '0001-01-01') dob = '';
@@ -76,12 +72,24 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             gender = null;
           }
           _selectedGender = gender;
+        });
 
+        // Request gamification status (level + XP)
+        final statusRes =
+        await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+        if (statusRes.statusCode == 200) {
+          final sd = jsonDecode(statusRes.body) as Map<String, dynamic>;
+          setState(() {
+            _currentLevel = (sd['current_level'] as num).toInt();
+            _xpTotal = (sd['xp_total'] as num).toInt();
+          });
+        }
+
+        setState(() {
           _loading = false;
         });
       } else {
-        setState(() =>
-        _error = 'Ошибка загрузки профиля: ${res.statusCode}');
+        setState(() => _error = 'Ошибка загрузки профиля: ${res.statusCode}');
       }
     } catch (e) {
       setState(() => _error = 'Ошибка: $e');
@@ -108,19 +116,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       updatedFields['address'] = _addressController.text;
     }
 
-    final oldDob =
-    (_initialData['DateOfBirth'] ?? _initialData['date_of_birth'] ?? '')
+    final oldDob = (_initialData['DateOfBirth'] ??
+        _initialData['date_of_birth'] ?? '')
         .split('T')[0];
     if (_dobController.text != oldDob) {
       if (_dobController.text.isNotEmpty &&
-          !RegExp(r'^\d{4}-\d{2}-\d{2}$')
-              .hasMatch(_dobController.text)) {
+          !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(_dobController.text)) {
         _showError('Неверный формат даты. Используйте ГГГГ-ММ-ДД');
         return;
       }
       if (_dobController.text.isNotEmpty) {
-        updatedFields['date_of_birth'] =
-        '${_dobController.text}T00:00:00Z';
+        updatedFields['date_of_birth'] = '${_dobController.text}T00:00:00Z';
       }
     }
 
@@ -135,8 +141,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     }
 
     try {
-      final response = await ApiService.putWithToken(
-          '/api/auth/profile', updatedFields);
+      final response =
+      await ApiService.putWithToken('/api/auth/profile', updatedFields);
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Профиль обновлён')),
@@ -183,10 +189,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       );
     }
 
-    final fullName = (_firstNameController.text +
-        ' ' +
-        _lastNameController.text)
-        .trim();
+    final fullName =
+    (_firstNameController.text + ' ' + _lastNameController.text).trim();
 
     return Scaffold(
       backgroundColor: TColor.primary,
@@ -242,27 +246,24 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       child: Column(
         children: [
           Padding(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
-                    '',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                      '',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      )),
                 ),
                 IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const SettingsScreen()),
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   ),
                 ),
               ],
@@ -275,6 +276,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             child: Icon(Icons.person, size: 50, color: Colors.grey),
           ),
           const SizedBox(height: 12),
+          // Show level and XP above the name
+          if (_currentLevel > 0 || _xpTotal > 0)
+            Text(
+              'Level $_currentLevel • XP $_xpTotal',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          if (_currentLevel > 0 || _xpTotal > 0) const SizedBox(height: 4),
           Text(
             fullName.isNotEmpty ? fullName : 'Not specified',
             style: const TextStyle(
@@ -295,8 +307,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildReadonlyTile(IconData icon, String label, String value) {
-    final displayText =
-    value.isNotEmpty ? value : "Нет данных";
+    final displayText = value.isNotEmpty ? value : "Нет данных";
     return ListTile(
       leading: Icon(icon, color: TColor.primary),
       title: Text(
@@ -315,9 +326,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
 
   Widget _buildEditableField(
       IconData icon, String label, TextEditingController controller) {
-    final displayText = controller.text.isNotEmpty
-        ? controller.text
-        : "Нет данных";
+    final displayText =
+    controller.text.isNotEmpty ? controller.text : "Нет данных";
     return ListTile(
       leading: Icon(icon, color: TColor.primary),
       title: Text(
@@ -339,9 +349,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildAddressField() {
-    final displayValue = _addressController.text.isNotEmpty
-        ? _addressController.text
-        : "Нет данных";
+    final displayValue =
+    _addressController.text.isNotEmpty ? _addressController.text : "Нет данных";
     return ListTile(
       leading: Icon(Icons.location_on, color: TColor.primary),
       title: Text(
@@ -359,8 +368,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       onTap: () async {
         final res = await Navigator.push<String>(
           context,
-          MaterialPageRoute(
-              builder: (_) => const ChooseAddressScreen()),
+          MaterialPageRoute(builder: (_) => const ChooseAddressScreen()),
         );
         if (res != null) {
           setState(() => _addressController.text = res);
@@ -371,9 +379,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildDateField() {
-    final displayValue = _dobController.text.isNotEmpty
-        ? _dobController.text
-        : "Нет данных";
+    final displayValue =
+    _dobController.text.isNotEmpty ? _dobController.text : "Нет данных";
     return ListTile(
       leading: Icon(Icons.cake, color: TColor.primary),
       title: Text(
@@ -444,8 +451,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
-  void _editFieldDialog(
-      String label, TextEditingController controller) {
+  void _editFieldDialog(String label, TextEditingController controller) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

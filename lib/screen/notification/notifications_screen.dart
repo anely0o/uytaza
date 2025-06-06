@@ -16,7 +16,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _items = [];
-  bool _showRead = true;
+  bool _showRead = false;
   // Набор ID уведомлений, которые сейчас развернуты (expanded)
   final Set<String> _expandedIds = {};
 

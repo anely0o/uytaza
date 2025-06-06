@@ -1,4 +1,5 @@
 // lib/screen/message/support_home_screen.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:uytaza/api/api_service.dart';
@@ -17,13 +18,13 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
   bool _loading = true;
   String? _error;
 
-  // All tickets fetched from the API
+  // Все тикеты, извлечённые из API
   List<Map<String, dynamic>> _tickets = [];
 
-  // Current filter: "all", "open", "in_progress", "closed", etc.
+  // Текущий фильтр статуса: "all", "open", "in_progress", "closed" и т.д.
   String _statusFilter = 'all';
 
-  // List of distinct statuses we've seen
+  // Список уникальных статусов для Dropdown
   final List<String> _statusOptions = ['all'];
 
   @override
@@ -36,8 +37,9 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _statusOptions.clear();
-      _statusOptions.add('all');
+      _statusOptions
+        ..clear()
+        ..add('all');
     });
 
     try {
@@ -46,12 +48,13 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
         final data = jsonDecode(res.body) as List<dynamic>;
         final allTickets = data.cast<Map<String, dynamic>>();
 
-        // Build a list of unique statuses
+        // Собираем уникальные статусы, чтобы заполнить Dropdown
         final statuses = <String>{};
         for (var t in allTickets) {
           final st = (t['status'] as String? ?? 'unknown').toLowerCase();
           statuses.add(st);
         }
+
         setState(() {
           _statusOptions.addAll(statuses.toList()..sort());
           _tickets = allTickets;
@@ -70,41 +73,70 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
     }
   }
 
+  /// Возвращает список тикетов с учётом выбранного фильтра
   List<Map<String, dynamic>> get _filteredTickets {
-    if (_statusFilter == 'all') return _tickets;
+    if (_statusFilter == 'all') return [..._tickets];
     return _tickets
-        .where((t) => (t['status'] as String? ?? '').toLowerCase() == _statusFilter)
+        .where((t) =>
+    ((t['status'] as String?)?.toLowerCase() ?? '') == _statusFilter)
         .toList();
   }
 
-  // Build a Card‐style ticket tile, similar to OrdersScreen
+  /// Сортируем тикеты так: всё, что status != 'closed', идёт впереди,
+  /// а status == 'closed' — в конец.
+  List<Map<String, dynamic>> get _sortedTickets {
+    final list = _filteredTickets;
+    list.sort((a, b) {
+      final sa = ((a['status'] as String?)?.toLowerCase() ?? 'unknown');
+      final sb = ((b['status'] as String?)?.toLowerCase() ?? 'unknown');
+      final va = sa == 'closed' ? 1 : 0;
+      final vb = sb == 'closed' ? 1 : 0;
+      return va.compareTo(vb);
+    });
+    return list;
+  }
+
+  /// Строит карточку одного тикета.
   Widget _buildTicketCard(Map<String, dynamic> ticket) {
     final status = (ticket['status'] as String? ?? 'unknown').toLowerCase();
     final hasNew = (ticket['has_new'] as bool?) ?? false;
     final id = ticket['id']?.toString() ?? '?';
     final subject = ticket['subject'] as String? ?? 'No subject';
 
+    // Фон и стили для закрытых тикетов
+    final isClosed = status == 'closed';
+
+    // Если тикет закрыт — фон светло-серый, текст — тёмно-серый
+    final cardColor = isClosed ? Colors.grey.shade200 : Colors.white;
+    final titleColor =
+    isClosed ? Colors.grey.shade600 : TColor.textPrimary;
+    final subtitleColor =
+    isClosed ? Colors.grey.shade500 : TColor.textSecondary;
+
     final titleStyle = TextStyle(
-      color: TColor.textPrimary,
+      color: titleColor,
       fontWeight: FontWeight.bold,
     );
     final subtitleStyle = TextStyle(
-      color: TColor.textSecondary,
+      color: subtitleColor,
       fontSize: 13,
     );
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: cardColor,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 2,
+      elevation: isClosed ? 0 : 2,
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        leading: hasNew
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: hasNew && !isClosed
             ? Container(
           width: 12,
           height: 12,
           decoration: BoxDecoration(
-            color: Colors.amber, // yellow dot
+            color: Colors.amber, // желтый индикатор "новое"
             shape: BoxShape.circle,
           ),
         )
@@ -117,11 +149,16 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
           '#$id  ·  ${status[0].toUpperCase()}${status.substring(1)}',
           style: subtitleStyle,
         ),
-        trailing: Icon(
+        trailing: isClosed
+            ? null
+            : Icon(
           Icons.chevron_right,
           color: TColor.primary,
         ),
-        onTap: () {
+        // Если тикет закрыт — onTap = null, иначе — навигация в чат
+        onTap: isClosed
+            ? null
+            : () {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -140,11 +177,9 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: TColor.background,
-
       appBar: AppBar(
         title: const Text('Support Requests'),
       ),
-
       floatingActionButton: FloatingActionButton(
         backgroundColor: TColor.primary,
         onPressed: () async {
@@ -158,7 +193,6 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
-
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -170,9 +204,10 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
       )
           : Column(
         children: [
-          // 1) Status filter dropdown
+          // 1) Дропдаун для фильтра по статусу
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 const Text(
@@ -186,10 +221,12 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: TColor.divider),
+                        borderSide:
+                        BorderSide(color: TColor.divider),
                       ),
                       contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
                     ),
                     items: _statusOptions
                         .map((s) => DropdownMenuItem(
@@ -213,53 +250,22 @@ class _SupportHomeScreenState extends State<SupportHomeScreen> {
             ),
           ),
 
-          // 2) “Open Tickets” section
-          if (_filteredTickets.where((t) => (t['status'] as String?)?.toLowerCase() != 'closed').isNotEmpty) ...[
-
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: _filteredTickets.length,
-                itemBuilder: (context, index) {
-                  final ticket = _filteredTickets.where(
-                        (t) => (t['status'] as String?)?.toLowerCase() != 'closed',
-                  ).toList()[index];
-                  return _buildTicketCard(ticket);
-                },
-              ),
+          // 2) Общий список тикетов (открытые сверху, закрытые — внизу)
+          Expanded(
+            child: _sortedTickets.isEmpty
+                ? const Center(
+              child: Text('No tickets found'),
+            )
+                : ListView.builder(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 4),
+              itemCount: _sortedTickets.length,
+              itemBuilder: (context, index) {
+                final ticket = _sortedTickets[index];
+                return _buildTicketCard(ticket);
+              },
             ),
-          ],
-
-          // 3) “Closed Tickets” section
-          if (_filteredTickets.where((t) => (t['status'] as String?)?.toLowerCase() == 'closed').isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Closed Tickets',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.redAccent),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: _filteredTickets.length,
-                itemBuilder: (context, index) {
-                  final ticket = _filteredTickets.where(
-                        (t) => (t['status'] as String?)?.toLowerCase() == 'closed',
-                  ).toList()[index];
-                  return _buildTicketCard(ticket);
-                },
-              ),
-            ),
-          ],
-
-          // 4) If no tickets at all:
-          if (_filteredTickets.isEmpty)
-            const Expanded(
-              child: Center(
-                child: Text('No tickets found'),
-              ),
-            ),
+          ),
         ],
       ),
     );

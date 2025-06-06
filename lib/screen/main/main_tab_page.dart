@@ -19,6 +19,7 @@ import '../subscription/subscriptions_screen.dart';
 
 class MainTabPage extends StatefulWidget {
   const MainTabPage({super.key});
+
   @override
   State<MainTabPage> createState() => _MainTabPageState();
 }
@@ -26,18 +27,24 @@ class MainTabPage extends StatefulWidget {
 class _MainTabPageState extends State<MainTabPage> {
   int _selectedIndex = 0;
   bool _argsHandled = false;
+
   UserRole? _userRole;
   bool _loadingRole = true;
   String? _error;
   int _unread = 0;
 
-  // Common profile fields
+  // Обычные профильные поля
   String? _firstName;
   String? _lastName;
+  String? _address;       // <-- адрес пользователя
   bool _loadingProfile = true;
 
-  // Cleaner-specific: rating
+  // Только для клинера: рейтинг
   double? _rating;
+
+  // Gamification fields
+  int _currentLevel = 0;
+  int _xpTotal      = 0;
 
   @override
   void initState() {
@@ -89,7 +96,7 @@ class _MainTabPageState extends State<MainTabPage> {
         if (mounted) setState(() => _unread = unreadCount);
       }
     } catch (_) {
-      // ignore network errors
+      // Игнорируем сетевые ошибки
     }
   }
 
@@ -101,20 +108,38 @@ class _MainTabPageState extends State<MainTabPage> {
         _firstName = (m['FirstName'] ?? m['first_name'] ?? '').toString();
         _lastName  = (m['LastName']  ?? m['last_name']  ?? '').toString();
 
-        // If cleaner, fetch their rating
+        // Добавляем адрес в профиль
+        _address = (m['Address'] ?? m['address'] ?? '').toString();
+
+        // Если роль – клинер, получаем рейтинг
         if (_userRole == UserRole.cleaner) {
           final cleanerId = (m['id'] ?? '').toString();
           if (cleanerId.isNotEmpty) {
-            final rateRes = await ApiService.getWithToken('${ApiRoutes.ratingCleaner}$cleanerId');
+            final rateRes = await ApiService.getWithToken(
+              '${ApiRoutes.ratingCleaner}$cleanerId',
+            );
             if (rateRes.statusCode == 200) {
               final rd = jsonDecode(rateRes.body) as Map<String, dynamic>;
               _rating = (rd['rating'] ?? 0).toDouble();
             }
           }
         }
+
+        // ── Запрашиваем gamification status для обоих (уровень + XP)
+        try {
+          final gamRes =
+          await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+          if (gamRes.statusCode == 200) {
+            final gd = jsonDecode(gamRes.body) as Map<String, dynamic>;
+            _currentLevel = (gd['current_level'] as num).toInt();
+            _xpTotal      = (gd['xp_total'] as num).toInt();
+          }
+        } catch (_) {
+          // Игнорируем ошибки запроса gamification
+        }
       }
     } catch (_) {
-      // ignore
+      // Игнорируем ошибки
     }
     if (mounted) setState(() => _loadingProfile = false);
   }
@@ -132,7 +157,7 @@ class _MainTabPageState extends State<MainTabPage> {
       );
     }
 
-    // Choose pages based on role
+    // Выбираем страницы в зависимости от роли
     final ordersPage = (_userRole == UserRole.cleaner)
         ? const CleanerOrdersScreen()
         : const OrdersScreen();
@@ -140,14 +165,14 @@ class _MainTabPageState extends State<MainTabPage> {
         ? const CleanerProfileScreen()
         : const ClientProfileScreen();
 
-    // Home is same for both roles
+    // Home одинаков для обеих ролей
     final pages = [
       const HomeScreen(),
       ordersPage,
       profilePage,
     ];
 
-    // Icons: same assets, but you can replace for cleaner if needed
+    // Иконки нижней навигации
     final icons = <String>[
       'assets/img/home_icon.png',
       'assets/img/calendar_icon.png',
@@ -165,52 +190,10 @@ class _MainTabPageState extends State<MainTabPage> {
               child: _loadingProfile
                   ? const Center(child: CircularProgressIndicator())
                   : (_userRole == UserRole.client
-                  ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${_firstName ?? ''} ${_lastName ?? ''}'.trim(),
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: TColor.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // for client, no rating stars
-                ],
-              )
-                  : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${_firstName ?? ''} ${_lastName ?? ''}'.trim(),
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: TColor.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Rating as stars
-                  Row(
-                    children: [
-                      // Display up to 5 stars, filled, half, or border
-                      ..._buildStarIcons(_rating ?? 0),
-                      const SizedBox(width: 8),
-                      Text(
-                        '(${(_rating ?? 0).toStringAsFixed(1)})',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: TColor.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              )),
+                  ? _buildClientHeader()
+                  : _buildCleanerHeader()),
             ),
-            // Common: History
+            // Общий пункт: История
             ListTile(
               leading: const Icon(Icons.history, color: Colors.grey),
               title: const Text('History'),
@@ -222,7 +205,7 @@ class _MainTabPageState extends State<MainTabPage> {
                 );
               },
             ),
-            // Only for client: Subscriptions
+            // Только для клиента: Мои подписки
             if (_userRole == UserRole.client) ...[
               ListTile(
                 leading: const Icon(Icons.repeat, color: Colors.grey),
@@ -231,12 +214,13 @@ class _MainTabPageState extends State<MainTabPage> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const SubscriptionsScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const SubscriptionsScreen()),
                   );
                 },
               ),
             ],
-            // Common: Support
+            // Общий пункт: Служба поддержки
             ListTile(
               leading: const Icon(Icons.support_agent, color: Colors.grey),
               title: const Text('Support'),
@@ -244,7 +228,8 @@ class _MainTabPageState extends State<MainTabPage> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SupportHomeScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const SupportHomeScreen()),
                 );
               },
             ),
@@ -265,7 +250,8 @@ class _MainTabPageState extends State<MainTabPage> {
             onPressed: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen()),
               );
               _loadUnread();
             },
@@ -278,7 +264,8 @@ class _MainTabPageState extends State<MainTabPage> {
                 padding: const EdgeInsets.all(6),
                 elevation: 0,
               ),
-              position: badges.BadgePosition.topEnd(top: -4, end: -4),
+              position:
+              badges.BadgePosition.topEnd(top: -4, end: -4),
               child: Icon(
                 Icons.notifications_none_rounded,
                 color: TColor.primary,
@@ -326,6 +313,113 @@ class _MainTabPageState extends State<MainTabPage> {
     );
   }
 
+  /// Сборка заголовка для клиента:
+  Widget _buildClientHeader() {
+    // Вычисляем прогресс XP (предполагаем 100 XP на уровень)
+    final xpForCurrentLevel = _xpTotal % 100;
+    final progress = xpForCurrentLevel / 100.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Имя
+        Text(
+          '${_firstName ?? ''} ${_lastName ?? ''}'.trim(),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: TColor.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Адрес под именем
+        if (_address != null && _address!.isNotEmpty)
+          Text(
+            _address!,
+            style: TextStyle(fontSize: 14, color: TColor.textSecondary),
+          ),
+        const SizedBox(height: 12),
+        // Шкала геймофикации (LinearProgressIndicator)
+        Text(
+          'Level $_currentLevel   •   XP $xpForCurrentLevel/100',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: TColor.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            backgroundColor: TColor.divider,
+            color: TColor.primary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Сборка заголовка для клинера:
+  Widget _buildCleanerHeader() {
+    // Вычисляем прогресс XP (предполагаем 100 XP на уровень)
+    final xpForCurrentLevel = _xpTotal % 100;
+    final progress = xpForCurrentLevel / 100.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Имя
+        Text(
+          '${_firstName ?? ''} ${_lastName ?? ''}'.trim(),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: TColor.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Рейтинг звёздами
+        Row(
+          children: [
+            ..._buildStarIcons(_rating ?? 0),
+            const SizedBox(width: 8),
+            Text(
+              '(${(_rating ?? 0).toStringAsFixed(1)})',
+              style: TextStyle(
+                fontSize: 16,
+                color: TColor.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Шкала геймофикации (LinearProgressIndicator)
+        Text(
+          'Level $_currentLevel   •   XP $xpForCurrentLevel/100',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: TColor.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            backgroundColor: TColor.divider,
+            color: TColor.primary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Отрисовка звёзд по рейтингу
   List<Widget> _buildStarIcons(double rating) {
     const totalStars = 5;
     int full = rating.floor();

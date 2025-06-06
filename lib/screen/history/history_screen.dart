@@ -56,10 +56,10 @@ class _HistoryScreenState extends State<HistoryScreen>
     });
 
     try {
-      // 1) Load orders:
+      // 1) Загрузка заказов:
       final ordersEndpoint = _isCleaner
-          ? ApiRoutes.cleanerOrders // returns completed orders for cleaner
-          : '/api/orders/my';
+          ? ApiRoutes.cleanerOrders      // например: '/api/orders/cleaner/closed'
+          : ApiRoutes.myOrders;         // например: '/api/orders/my'
 
       final ordersRes = await ApiService.getWithToken(ordersEndpoint);
       if (ordersRes.statusCode != 200) {
@@ -68,22 +68,23 @@ class _HistoryScreenState extends State<HistoryScreen>
       final List<dynamic> ordersJson = jsonDecode(ordersRes.body);
       final allOrders = ordersJson.map((e) => Order.fromJson(e)).toList();
 
-      // Filter: for cleaner – only status "finished"
+      // Для клинера — только статус "finished"
       if (_isCleaner) {
-        _closedOrders =
-            allOrders.where((o) => o.status.toLowerCase() == 'finished').toList();
+        _closedOrders = allOrders
+            .where((o) => o.status.toLowerCase() == 'finished')
+            .toList();
       } else {
-        // For client: "completed" or "cancelled"
+        // Для клиента: "completed" или "cancelled"
         _closedOrders = allOrders.where((o) {
           final st = o.status.toLowerCase();
           return st == 'completed' || st == 'cancelled';
         }).toList();
       }
 
-      // 2) Load subscriptions — only for client
+      // 2) Загрузка подписок — только для клиента
       if (!_isCleaner) {
-        final subsRes =
-        await ApiService.getWithToken('/api/subscriptions/my');
+        final subsEndpoint = '${ApiRoutes.subs}/my'; // '/api/subscriptions/my'
+        final subsRes = await ApiService.getWithToken(subsEndpoint);
         if (subsRes.statusCode != 200) {
           throw 'Subs HTTP ${subsRes.statusCode}';
         }
@@ -117,13 +118,12 @@ class _HistoryScreenState extends State<HistoryScreen>
     final fmt = DateFormat('dd.MM.yyyy, HH:mm');
     final formattedDate = fmt.format(order.scheduledAt);
 
-    // Expecting that Order model now contains rating and reviews (List<String>).
+    // У Order появились поля rating (double?) и reviews (List<String>?)
     final rating = order.rating ?? 0.0;
     final reviews = order.reviews ?? <String>[];
 
     return Card(
-      shape:
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 3,
       child: Padding(
@@ -132,9 +132,8 @@ class _HistoryScreenState extends State<HistoryScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Date: $formattedDate',
-              style: TextStyle(
-                  fontSize: 14, color: TColor.textSecondary),
+              'Дата: $formattedDate',
+              style: TextStyle(fontSize: 14, color: TColor.textSecondary),
             ),
             const SizedBox(height: 8),
             Row(
@@ -143,21 +142,20 @@ class _HistoryScreenState extends State<HistoryScreen>
                 const SizedBox(width: 4),
                 Text(
                   rating.toStringAsFixed(1),
-                  style: TextStyle(
-                      fontSize: 14, color: TColor.textPrimary),
+                  style:
+                  TextStyle(fontSize: 14, color: TColor.textPrimary),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             if (reviews.isEmpty)
               Text(
-                'No reviews for this order.',
-                style:
-                TextStyle(color: TColor.textSecondary),
+                'Нет отзывов по этому заказу.',
+                style: TextStyle(color: TColor.textSecondary),
               )
             else ...[
               Text(
-                'Reviews:',
+                'Отзывы:',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: TColor.textPrimary),
@@ -167,8 +165,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
                   '• $r',
-                  style: TextStyle(
-                      color: TColor.textSecondary),
+                  style: TextStyle(color: TColor.textSecondary),
                 ),
               )),
             ],
@@ -181,21 +178,20 @@ class _HistoryScreenState extends State<HistoryScreen>
   Widget _buildSubscriptionTile(Subscription s) {
     final fmt = DateFormat('dd.MM.yyyy');
     return Card(
-      shape:
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 3,
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         title: Text(
-          'Order ${s.orderId.substring(0, 6)}…  •  ${s.status[0].toUpperCase()}${s.status.substring(1)}',
+          'Заказ ${s.orderId.substring(0, 6)}…  •  ${s.status[0].toUpperCase()}${s.status.substring(1)}',
           style: TextStyle(
             color: TColor.textSecondary,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
-          '${fmt.format(s.start)} → ${fmt.format(s.end)}',
+          '${fmt.format(s.startDate)} → ${fmt.format(s.endDate)}',
           style: TextStyle(color: TColor.textSecondary, fontSize: 13),
         ),
         trailing: Icon(Icons.chevron_right, color: TColor.primary),
@@ -203,8 +199,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  SubscriptionEditPage(subscription: s),
+              builder: (_) => SubscriptionEditPage(subscription: s),
             ),
           ).then((_) => _loadHistory());
         },
@@ -220,7 +215,7 @@ class _HistoryScreenState extends State<HistoryScreen>
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          _isCleaner ? 'Order History' : 'History',
+          _isCleaner ? 'История заказов' : 'История',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -233,8 +228,8 @@ class _HistoryScreenState extends State<HistoryScreen>
           unselectedLabelColor: TColor.textSecondary,
           indicatorColor: TColor.primary,
           tabs: const [
-            Tab(text: 'Orders History'),
-            Tab(text: 'Subscriptions History'),
+            Tab(text: 'Заказы'),
+            Tab(text: 'Подписки'),
           ],
         ),
       ),
@@ -248,13 +243,12 @@ class _HistoryScreenState extends State<HistoryScreen>
         ),
       )
           : _isCleaner
-      // Cleaner: only list of completed orders with rating and reviews
+      // Клинер: только завершённые заказы с рейтингом и отзывами
           ? (_closedOrders.isEmpty
           ? Center(
         child: Text(
-          'You have no completed orders yet.',
-          style:
-          TextStyle(color: TColor.textSecondary),
+          'У вас пока нет завершённых заказов.',
+          style: TextStyle(color: TColor.textSecondary),
         ),
       )
           : RefreshIndicator(
@@ -266,15 +260,15 @@ class _HistoryScreenState extends State<HistoryScreen>
               _buildOrderTile(_closedOrders[i]),
         ),
       ))
-      // Client: two tabs (orders + subscriptions)
+      // Клиент: два таба (заказы и подписки)
           : TabBarView(
         controller: _tabController,
         children: [
-          // 1) Orders history for client
+          // 1) История заказов для клиента
           _closedOrders.isEmpty
               ? Center(
             child: Text(
-              'No closed orders.',
+              'Нет закрытых заказов.',
               style: TextStyle(
                   color: TColor.textSecondary),
             ),
@@ -288,11 +282,11 @@ class _HistoryScreenState extends State<HistoryScreen>
                   _buildOrderTile(_closedOrders[i]),
             ),
           ),
-          // 2) Subscriptions history for client
+          // 2) История отменённых подписок для клиента
           _cancelledSubs.isEmpty
               ? Center(
             child: Text(
-              'No cancelled subscriptions.',
+              'Нет отменённых подписок.',
               style: TextStyle(
                   color: TColor.textSecondary),
             ),

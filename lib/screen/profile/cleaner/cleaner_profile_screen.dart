@@ -1,3 +1,5 @@
+// lib/screen/profile/cleaner_profile_screen.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +19,10 @@ class CleanerProfileScreen extends StatefulWidget {
 class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   final TextEditingController _firstNameCtl = TextEditingController();
   final TextEditingController _lastNameCtl  = TextEditingController();
+
+  int    _currentLevel = 0;
+  int    _xpTotal      = 0;
+
   double _rating = 0.0;
   int    _jobsDone = 0;
   double _experienceYears = 0.0;
@@ -39,7 +45,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     });
 
     try {
-      // 1) Current cleaner's profile
+      // 1) Текущий профиль клинера
       final profileRes = await ApiService.getWithToken(ApiRoutes.profile);
       if (profileRes.statusCode != 200) {
         throw 'Error ${profileRes.statusCode}';
@@ -50,8 +56,16 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
 
       final cleanerId = (profileData['id'] ?? '').toString();
 
+      // 2) Если есть ID, подтягиваем gamification (уровень + XP)
       if (cleanerId.isNotEmpty) {
-        // 2) Rating, jobsDone, experienceYears
+        final statusRes = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+        if (statusRes.statusCode == 200) {
+          final sd = jsonDecode(statusRes.body) as Map<String, dynamic>;
+          _currentLevel = (sd['current_level'] as num).toInt();
+          _xpTotal      = (sd['xp_total'] as num).toInt();
+        }
+
+        // 3) Оценка, выполненные работы, опыт
         final ratingRes = await ApiService.getWithToken('${ApiRoutes.ratingCleaner}$cleanerId');
         if (ratingRes.statusCode == 200) {
           final rd = jsonDecode(ratingRes.body) as Map<String, dynamic>;
@@ -60,7 +74,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
           _experienceYears = (rd['experience_years'] ?? 0).toDouble();
         }
 
-        // 3) Reviews
+        // 4) Отзывы
         final reviewsRes = await ApiService.getWithToken('${ApiRoutes.reviewsCleaner}$cleanerId');
         if (reviewsRes.statusCode == 200) {
           final list = jsonDecode(reviewsRes.body) as List<dynamic>;
@@ -154,6 +168,18 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
             child: Icon(Icons.person, size: 50, color: Colors.grey),
           ),
           const SizedBox(height: 12),
+          // Показываем уровень и XP над именем
+          if (_currentLevel > 0 || _xpTotal > 0)
+            Text(
+              'Level $_currentLevel • XP $_xpTotal',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          if (_currentLevel > 0 || _xpTotal > 0)
+            const SizedBox(height: 4),
           Text(
             '${_firstNameCtl.text} ${_lastNameCtl.text}'.trim(),
             style: const TextStyle(

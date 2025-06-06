@@ -1,8 +1,7 @@
 // lib/screen/support/new_ticket_screen.dart
+
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/common/color_extension.dart';
 
@@ -16,15 +15,7 @@ class NewTicketScreen extends StatefulWidget {
 class _NewTicketScreenState extends State<NewTicketScreen> {
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
-  File? _selectedImage;
   bool _loading = false;
-
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedImage = File(picked.path));
-    }
-  }
 
   Future<void> _submit() async {
     final subject = _subjectController.text.trim();
@@ -38,7 +29,7 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
 
     setState(() => _loading = true);
     try {
-      // 1) Create the ticket
+      // 1) Создаём тикет
       final ticketRes = await ApiService.postWithToken(
         '/api/support/tickets',
         {'subject': subject},
@@ -51,18 +42,11 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
       final ticketJson = jsonDecode(ticketRes.body) as Map<String, dynamic>;
       final ticketId = ticketJson['id'].toString();
 
-      // 2) Send the first message under that ticket
+      // 2) Отправляем первое сообщение (только текст)
       final messageBody = {'text': message};
-      final msgRes = _selectedImage == null
-          ? await ApiService.postWithToken(
+      final msgRes = await ApiService.postWithToken(
         '/api/support/tickets/$ticketId/messages',
         messageBody,
-      )
-          : await ApiService.postMultipart(
-        '/api/support/tickets/$ticketId/messages',
-        fileField: 'image',
-        file: _selectedImage!,
-        fields: messageBody.map((k, v) => MapEntry(k, v.toString())),
       );
 
       if (msgRes.statusCode == 200 || msgRes.statusCode == 201) {
@@ -124,22 +108,6 @@ class _NewTicketScreenState extends State<NewTicketScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          Row(children: [
-            ElevatedButton.icon(
-              onPressed: _pickImage,
-              icon: Icon(Icons.image, color: Colors.white),
-              label: const Text("Attach Image"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: TColor.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            if (_selectedImage != null)
-              Text("Image selected",
-                  style:
-                  TextStyle(fontSize: 13, color: TColor.primary)),
-          ]),
           const SizedBox(height: 30),
           SizedBox(
             width: double.infinity,

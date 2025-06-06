@@ -1,4 +1,3 @@
-// lib/screen/subscription/subscriptions_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -33,6 +32,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   Future<void> _loadSubscriptions() async {
     setState(() => _loading = true);
     try {
+      /// GET /subscriptions/my возвращает JSON-массив Subscription :contentReference[oaicite:12]{index=12}
       final r = await ApiService.getWithToken('/api/subscriptions/my');
       if (r.statusCode == 200) {
         final subs = (jsonDecode(r.body) as List)
@@ -58,17 +58,15 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     }
   }
 
-  /// Отображаем только «активные» (не cancelled) подписки
+  /// Фильтруем по статусу и дате (status ≠ cancelled для “active”), аналогично Go-логике GetByClient + статус проверки :contentReference[oaicite:13]{index=13}
   List<Subscription> get _filteredSubs {
-    final activeOnly = _allSubs.where((s) {
-      return s.status.toLowerCase() != 'cancelled';
-    }).toList();
+    final activeOnly = _allSubs.where((s) => s.status.toLowerCase() != 'cancelled').toList();
 
     return activeOnly.where((s) {
       final matchesStatus = (_statusFilter == 'all') ||
           (s.status.toLowerCase() != 'cancelled' && _statusFilter == 'active');
       final matchesDate = _dateFilter == null ||
-          DateFormat('yyyy-MM-dd').format(s.start) ==
+          DateFormat('yyyy-MM-dd').format(s.startDate) ==
               DateFormat('yyyy-MM-dd').format(_dateFilter!);
       return matchesStatus && matchesDate;
     }).toList();
@@ -80,13 +78,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
     return Scaffold(
       backgroundColor: TColor.background,
-
-      // AppBar без “Добавить”, FAB снизу
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          'My Subscriptions',
+          'Мои подписки',
           style: TextStyle(
             color: TColor.textPrimary,
             fontWeight: FontWeight.bold,
@@ -95,8 +91,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         centerTitle: true,
         iconTheme: IconThemeData(color: TColor.primary),
       ),
-
-      // FAB для создания новой подписки
       floatingActionButton: FloatingActionButton(
         backgroundColor: TColor.primary,
         child: const Icon(Icons.add, color: Colors.white),
@@ -110,7 +104,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           }
         },
       ),
-
       body: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -131,19 +124,19 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         )
             : Column(
           children: [
-            // Строка фильтров: статус + дата
+            // Фильтры: статус + дата
             Row(
               children: [
                 DropdownButton<String>(
                   value: _statusFilter,
-                  items: [
-                    const DropdownMenuItem(
+                  items: const [
+                    DropdownMenuItem(
                       value: 'all',
-                      child: Text('All'),
+                      child: Text('Все'),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'active',
-                      child: Text('Active'),
+                      child: Text('Активные'),
                     ),
                   ],
                   onChanged: (val) {
@@ -157,9 +150,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   icon: Icon(Icons.date_range, color: TColor.primary),
                   label: Text(
                     _dateFilter == null
-                        ? "Pick date"
-                        : DateFormat('yyyy-MM-dd')
-                        .format(_dateFilter!),
+                        ? "Дата начала"
+                        : DateFormat('yyyy-MM-dd').format(_dateFilter!),
                     style: TextStyle(color: TColor.primary),
                   ),
                   onPressed: () async {
@@ -183,12 +175,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Список активных подписок
+            // Список подписок
             Expanded(
               child: filteredSubs.isEmpty
                   ? Center(
                 child: Text(
-                  'No active subscriptions.',
+                  'Нет активных подписок.',
                   style: TextStyle(
                       fontSize: 16,
                       color: TColor.textSecondary),
@@ -212,11 +204,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
                       title: Text(
-                        'Order ${s.orderId.substring(0, 6)}…  •  ${s.status[0].toUpperCase()}${s.status.substring(1)}',
+                        'Заказ ${s.orderId.substring(0, 6)}…  •  ${s.status[0].toUpperCase()}${s.status.substring(1)}',
                         style: TextStyle(
                           color: isCancelled
-                              ? TColor.textSecondary
-                              .withOpacity(0.7)
+                              ? TColor.textSecondary.withOpacity(0.7)
                               : TColor.textPrimary,
                           fontWeight: isCancelled
                               ? FontWeight.normal
@@ -224,11 +215,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        '${fmt.format(s.start)} → ${fmt.format(s.end)}',
+                        '${fmt.format(s.startDate)} → ${fmt.format(s.endDate)}',
                         style: TextStyle(
                           color: isCancelled
-                              ? TColor.textSecondary
-                              .withOpacity(0.7)
+                              ? TColor.textSecondary.withOpacity(0.7)
                               : TColor.textSecondary,
                           fontSize: 13,
                         ),
@@ -240,10 +230,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                             : TColor.primary,
                       ),
                       onTap: () {
-                        Navigator.pushNamed(
+                        Navigator.push(
                           context,
-                          '/subs/edit',
-                          arguments: s,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                SubscriptionEditPage(
+                                    subscription: s),
+                          ),
                         ).then((_) => _loadSubscriptions());
                       },
                     ),

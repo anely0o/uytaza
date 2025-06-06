@@ -1,44 +1,102 @@
 import 'dart:convert';
 
+/// Модель расписания (ScheduleSpec)
+class ScheduleSpec {
+  final String frequency;       // “weekly”, “biweekly” и т.д.
+  final List<String> daysOfWeek;  // ["Mon", "Wed", ...]
+  final List<int> weekNumbers;    // [1, 3] для biweekly и т.д.
+
+  ScheduleSpec({
+    required this.frequency,
+    required this.daysOfWeek,
+    required this.weekNumbers,
+  });
+
+  factory ScheduleSpec.fromJson(Map<String, dynamic> json) {
+    return ScheduleSpec(
+      frequency: json['frequency'] as String,
+      daysOfWeek: List<String>.from(json['days_of_week'] ?? []),
+      weekNumbers: List<int>.from(json['week_numbers'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'frequency': frequency,
+      'days_of_week': daysOfWeek,
+      'week_numbers': weekNumbers,
+    };
+  }
+}
+
+/// Основная модель подписки (Subscription), соответствующая Go-структуре:
+/// id, order_id, user_id, start_date, end_date, schedule, price, status, created_at, updated_at, last_order_date, next_planned_date :contentReference[oaicite:1]{index=1}
 class Subscription {
-  final String id;
-  final String orderId;
-  final DateTime start;
-  late final DateTime end;
-  final List<int> days;     // 1..7
-  final String status;
+  String id;
+  String orderId;
+  String userId;
+  DateTime startDate;
+  DateTime endDate;
+  ScheduleSpec schedule;
+  double price;
+  String status; // “active”, “expired”, “cancelled”
+  DateTime createdAt;
+  DateTime updatedAt;
+  DateTime? lastOrderDate;
+  DateTime? nextPlannedDate;
 
   Subscription({
     required this.id,
     required this.orderId,
-    required this.start,
-    required this.end,
-    required this.days,
+    required this.userId,
+    required this.startDate,
+    required this.endDate,
+    required this.schedule,
+    required this.price,
     required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.lastOrderDate,
+    this.nextPlannedDate,
   });
 
-  factory Subscription.fromJson(Map<String, dynamic> j) {
-    final _dayToIndex = {
-      'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4,
-      'Fri': 5, 'Sat': 6, 'Sun': 7,
-    };
-
+  factory Subscription.fromJson(Map<String, dynamic> json) {
     return Subscription(
-      id      : j['id'] ?? j['_id'],
-      orderId : j['order_id'],
-      start   : DateTime.parse(j['start_date']).toLocal(),
-      end     : DateTime.parse(j['end_date']).toLocal(),
-      days    : (j['days_of_week'] as List)
-          .map((e) => _dayToIndex[e] ?? 0)
-          .where((i) => i != 0)
-          .toList(),
-      status  : j['status'] ?? 'active',
+      id: json['id'] as String,
+      orderId: json['order_id'] as String,
+      userId: json['user_id'] as String,
+      startDate: DateTime.parse(json['start_date'] as String).toLocal(),
+      endDate: DateTime.parse(json['end_date'] as String).toLocal(),
+      schedule: ScheduleSpec.fromJson(json['schedule'] as Map<String, dynamic>),
+      price: (json['price'] as num).toDouble(),
+      status: json['status'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+      lastOrderDate: json['last_order_date'] != null
+          ? DateTime.parse(json['last_order_date'] as String).toLocal()
+          : null,
+      nextPlannedDate: json['next_planned_date'] != null
+          ? DateTime.parse(json['next_planned_date'] as String).toLocal()
+          : null,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'start_date'  : start.toUtc().toIso8601String(),
-    'end_date'    : end.toUtc().toIso8601String(),
-    'days_of_week': days.map((e)=>e.toString()).toList(),
-  };
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'order_id': orderId,
+      'user_id': userId,
+      'start_date': startDate.toUtc().toIso8601String(),
+      'end_date': endDate.toUtc().toIso8601String(),
+      'schedule': schedule.toJson(),
+      'price': price,
+      'status': status,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+      if (lastOrderDate != null)
+        'last_order_date': lastOrderDate!.toUtc().toIso8601String(),
+      if (nextPlannedDate != null)
+        'next_planned_date': nextPlannedDate!.toUtc().toIso8601String(),
+    };
+  }
 }
