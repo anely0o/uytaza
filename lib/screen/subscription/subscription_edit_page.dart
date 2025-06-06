@@ -42,7 +42,7 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
   ];
   late Set<int> _selectedDays;
 
-  // Week numbers (1..5) – used when freq ≠ weekly
+  // Week numbers (1..5) – used when frequency ≠ weekly
   late Set<int> _selectedWeekNumbers;
 
   bool _loading = false;
@@ -56,13 +56,11 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
     _startDate = widget.subscription.startDate;
     _endDate = widget.subscription.endDate;
     _selectedFrequency = sched.frequency.toLowerCase();
-    // daysOfWeek: List<String> like ['Mon','Fri'...] → convert to indices
     _selectedDays = sched.daysOfWeek
         .map((d) => _shortWeek.indexOf(d))
         .where((idx) => idx >= 0 && idx < 7)
         .map((idx) => idx + 1)
         .toSet();
-    // weekNumbers: List<int>
     _selectedWeekNumbers = Set<int>.from(sched.weekNumbers);
   }
 
@@ -76,12 +74,10 @@ class _SubscriptionEditPageState extends State<SubscriptionEditPage> {
   }
 
   Future<void> _updateSubscription() async {
-    // Validate days
     if (_selectedDays.isEmpty) {
       _showSnack('Please select at least one weekday', isError: true);
       return;
     }
-    // Validate week numbers if needed
     if (_selectedFrequency != 'weekly') {
       int required;
       switch (_selectedFrequency) {
