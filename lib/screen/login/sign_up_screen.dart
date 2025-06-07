@@ -111,19 +111,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         fontWeight: FontWeight.bold,
                         onPressed: _handleSignUp,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Or Sign Up with",
-                        style: TextStyle(color: TColor.placeholder),
-                      ),
-                      const SizedBox(height: 10),
-                      InkWell(
-                        onTap: () {
-                          // TODO: Google Sign-Up
-                        },
-                        child: Image.asset("assets/img/google.png",
-                            width: 50),
-                      ),
                     ],
                   ),
                 ),

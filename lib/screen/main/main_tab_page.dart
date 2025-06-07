@@ -12,7 +12,8 @@ import 'package:uytaza/screen/profile/cleaner/cleaner_profile_screen.dart';
 import 'package:uytaza/screen/profile/client/client_profile_screen.dart';
 import 'package:uytaza/screen/notification/notifications_screen.dart';
 import 'package:uytaza/screen/message/support_home_screen.dart';
-import 'package:uytaza/screen/history/history_screen.dart';
+import 'package:uytaza/screen/history/client_history_screen.dart';
+import 'package:uytaza/screen/history/cleaner_history_screen.dart';
 import '../home/home_screen.dart';
 import '../order/cleaner/cleaner_orders_screen.dart';
 import '../subscription/subscriptions_screen.dart';
@@ -33,18 +34,15 @@ class _MainTabPageState extends State<MainTabPage> {
   String? _error;
   int _unread = 0;
 
-  // Обычные профильные поля
   String? _firstName;
   String? _lastName;
-  String? _address;       // <-- адрес пользователя
+  String? _address;
   bool _loadingProfile = true;
 
-  // Только для клинера: рейтинг
   double? _rating;
 
-  // Gamification fields
   int _currentLevel = 0;
-  int _xpTotal      = 0;
+  int _xpTotal = 0;
 
   @override
   void initState() {
@@ -95,9 +93,7 @@ class _MainTabPageState extends State<MainTabPage> {
             .length;
         if (mounted) setState(() => _unread = unreadCount);
       }
-    } catch (_) {
-      // Игнорируем сетевые ошибки
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadProfile() async {
@@ -106,12 +102,9 @@ class _MainTabPageState extends State<MainTabPage> {
       if (res.statusCode == 200) {
         final m = jsonDecode(res.body) as Map<String, dynamic>;
         _firstName = (m['FirstName'] ?? m['first_name'] ?? '').toString();
-        _lastName  = (m['LastName']  ?? m['last_name']  ?? '').toString();
-
-        // Добавляем адрес в профиль
+        _lastName = (m['LastName'] ?? m['last_name'] ?? '').toString();
         _address = (m['Address'] ?? m['address'] ?? '').toString();
 
-        // Если роль – клинер, получаем рейтинг
         if (_userRole == UserRole.cleaner) {
           final cleanerId = (m['id'] ?? '').toString();
           if (cleanerId.isNotEmpty) {
@@ -125,22 +118,17 @@ class _MainTabPageState extends State<MainTabPage> {
           }
         }
 
-        // ── Запрашиваем gamification status для обоих (уровень + XP)
         try {
           final gamRes =
           await ApiService.getWithToken(ApiRoutes.gamificationStatus);
           if (gamRes.statusCode == 200) {
             final gd = jsonDecode(gamRes.body) as Map<String, dynamic>;
             _currentLevel = (gd['current_level'] as num).toInt();
-            _xpTotal      = (gd['xp_total'] as num).toInt();
+            _xpTotal = (gd['xp_total'] as num).toInt();
           }
-        } catch (_) {
-          // Игнорируем ошибки запроса gamification
-        }
+        } catch (_) {}
       }
-    } catch (_) {
-      // Игнорируем ошибки
-    }
+    } catch (_) {}
     if (mounted) setState(() => _loadingProfile = false);
   }
 
@@ -157,7 +145,6 @@ class _MainTabPageState extends State<MainTabPage> {
       );
     }
 
-    // Выбираем страницы в зависимости от роли
     final ordersPage = (_userRole == UserRole.cleaner)
         ? const CleanerOrdersScreen()
         : const OrdersScreen();
@@ -165,14 +152,12 @@ class _MainTabPageState extends State<MainTabPage> {
         ? const CleanerProfileScreen()
         : const ClientProfileScreen();
 
-    // Home одинаков для обеих ролей
     final pages = [
       const HomeScreen(),
       ordersPage,
       profilePage,
     ];
 
-    // Иконки нижней навигации
     final icons = <String>[
       'assets/img/home_icon.png',
       'assets/img/calendar_icon.png',
@@ -193,7 +178,6 @@ class _MainTabPageState extends State<MainTabPage> {
                   ? _buildClientHeader()
                   : _buildCleanerHeader()),
             ),
-            // Общий пункт: История
             ListTile(
               leading: const Icon(Icons.history, color: Colors.grey),
               title: const Text('History'),
@@ -201,11 +185,14 @@ class _MainTabPageState extends State<MainTabPage> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => _userRole == UserRole.cleaner
+                        ? const CleanerHistoryScreen()
+                        : const ClientHistoryScreen(),
+                  ),
                 );
               },
             ),
-            // Только для клиента: Мои подписки
             if (_userRole == UserRole.client) ...[
               ListTile(
                 leading: const Icon(Icons.repeat, color: Colors.grey),
@@ -220,7 +207,6 @@ class _MainTabPageState extends State<MainTabPage> {
                 },
               ),
             ],
-            // Общий пункт: Служба поддержки
             ListTile(
               leading: const Icon(Icons.support_agent, color: Colors.grey),
               title: const Text('Support'),
@@ -236,7 +222,6 @@ class _MainTabPageState extends State<MainTabPage> {
           ],
         ),
       ),
-
       appBar: (_selectedIndex == 2)
           ? null
           : AppBar(
@@ -264,8 +249,7 @@ class _MainTabPageState extends State<MainTabPage> {
                 padding: const EdgeInsets.all(6),
                 elevation: 0,
               ),
-              position:
-              badges.BadgePosition.topEnd(top: -4, end: -4),
+              position: badges.BadgePosition.topEnd(top: -4, end: -4),
               child: Icon(
                 Icons.notifications_none_rounded,
                 color: TColor.primary,
@@ -274,9 +258,7 @@ class _MainTabPageState extends State<MainTabPage> {
           ),
         ],
       ),
-
       body: pages[_selectedIndex],
-
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -302,17 +284,12 @@ class _MainTabPageState extends State<MainTabPage> {
                 color: isSelected ? Colors.black : TColor.textSecondary,
               ),
             ),
-            label: i == 0
-                ? (_userRole == UserRole.cleaner ? 'Home' : '')
-                : i == 1
-                ? (_userRole == UserRole.cleaner ? 'Orders' : '')
-                : (_userRole == UserRole.cleaner ? 'Profile' : ''),
+            label: '',
           );
         }),
       ),
     );
   }
-
   /// Сборка заголовка для клиента:
   Widget _buildClientHeader() {
     // Вычисляем прогресс XP (предполагаем 100 XP на уровень)

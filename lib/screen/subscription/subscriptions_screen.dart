@@ -19,8 +19,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   String? _error;
   List<Subscription> _allSubs = [];
 
-  // Фильтры
-  String _statusFilter = 'all'; // 'all' или 'active'
+  String _statusFilter = 'all'; // 'all' or 'active'
   DateTime? _dateFilter;
 
   @override
@@ -32,7 +31,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   Future<void> _loadSubscriptions() async {
     setState(() => _loading = true);
     try {
-      /// GET /subscriptions/my возвращает JSON-массив Subscription :contentReference[oaicite:12]{index=12}
       final r = await ApiService.getWithToken('/api/subscriptions/my');
       if (r.statusCode == 200) {
         final subs = (jsonDecode(r.body) as List)
@@ -58,7 +56,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     }
   }
 
-  /// Фильтруем по статусу и дате (status ≠ cancelled для “active”), аналогично Go-логике GetByClient + статус проверки :contentReference[oaicite:13]{index=13}
   List<Subscription> get _filteredSubs {
     final activeOnly = _allSubs.where((s) => s.status.toLowerCase() != 'cancelled').toList();
 
@@ -82,7 +79,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          'Мои подписки',
+          'My Subscriptions',
           style: TextStyle(
             color: TColor.textPrimary,
             fontWeight: FontWeight.bold,
@@ -124,7 +121,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         )
             : Column(
           children: [
-            // Фильтры: статус + дата
             Row(
               children: [
                 DropdownButton<String>(
@@ -132,11 +128,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   items: const [
                     DropdownMenuItem(
                       value: 'all',
-                      child: Text('Все'),
+                      child: Text('All'),
                     ),
                     DropdownMenuItem(
                       value: 'active',
-                      child: Text('Активные'),
+                      child: Text('Active'),
                     ),
                   ],
                   onChanged: (val) {
@@ -150,7 +146,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   icon: Icon(Icons.date_range, color: TColor.primary),
                   label: Text(
                     _dateFilter == null
-                        ? "Дата начала"
+                        ? "Start date"
                         : DateFormat('yyyy-MM-dd').format(_dateFilter!),
                     style: TextStyle(color: TColor.primary),
                   ),
@@ -174,13 +170,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               ],
             ),
             const SizedBox(height: 10),
-
-            // Список подписок
             Expanded(
               child: filteredSubs.isEmpty
                   ? Center(
                 child: Text(
-                  'Нет активных подписок.',
+                  'No active subscriptions.',
                   style: TextStyle(
                       fontSize: 16,
                       color: TColor.textSecondary),
@@ -204,10 +198,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
                       title: Text(
-                        'Заказ ${s.orderId.substring(0, 6)}…  •  ${s.status[0].toUpperCase()}${s.status.substring(1)}',
+                        'Order ${s.orderId.substring(0, 6)}…  •  ${s.status[0].toUpperCase()}${s.status.substring(1)}',
                         style: TextStyle(
                           color: isCancelled
-                              ? TColor.textSecondary.withOpacity(0.7)
+                              ? TColor.textSecondary
+                              .withOpacity(0.7)
                               : TColor.textPrimary,
                           fontWeight: isCancelled
                               ? FontWeight.normal
@@ -218,7 +213,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         '${fmt.format(s.startDate)} → ${fmt.format(s.endDate)}',
                         style: TextStyle(
                           color: isCancelled
-                              ? TColor.textSecondary.withOpacity(0.7)
+                              ? TColor.textSecondary
+                              .withOpacity(0.7)
                               : TColor.textSecondary,
                           fontSize: 13,
                         ),
@@ -233,9 +229,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                SubscriptionEditPage(
-                                    subscription: s),
+                            builder: (_) => SubscriptionEditPage(
+                                subscription: s),
                           ),
                         ).then((_) => _loadSubscriptions());
                       },

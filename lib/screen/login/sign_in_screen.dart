@@ -21,7 +21,6 @@ class _SignInScreenState extends State<SignInScreen> {
   final txtEmail = TextEditingController();
   final txtPassword = TextEditingController();
   bool isPasswordVisible = false;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // ────────── EMAIL / PASSWORD ──────────
   Future<void> _handleSignIn() async {
@@ -97,28 +96,6 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  // ────────── GOOGLE SIGN-IN ──────────
-  Future<void> _handleGoogleSignIn() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
-
-      final googleAuth = await googleUser.authentication;
-      final res = await ApiService.post('/api/auth/google-login', {
-        'id_token': googleAuth.idToken,
-      });
-
-      if (res.statusCode == 200) {
-        final token = jsonDecode(res.body)['token'];
-        await ApiService.saveToken(token);
-        Navigator.pushNamedAndRemoveUntil(context, '/main', (_) => false);
-      } else {
-        _show(jsonDecode(res.body)['error'] ?? 'Google login error');
-      }
-    } catch (e) {
-      _show('Google Sign-In failed: $e');
-    }
-  }
 
   // ────────── UI ──────────
   @override
@@ -208,14 +185,6 @@ class _SignInScreenState extends State<SignInScreen> {
           backgroundColor: TColor.primary,
           textColor: Colors.white,
           onPressed: _handleSignIn,
-        ),
-        const SizedBox(height: 10),
-        Text('Or Sign In with',
-            style: TextStyle(color: TColor.placeholder)),
-        const SizedBox(height: 10),
-        InkWell(
-          onTap: _handleGoogleSignIn,
-          child: Image.asset('assets/img/google.png', width: 50),
         ),
       ],
     ),

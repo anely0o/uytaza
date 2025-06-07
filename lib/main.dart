@@ -1,7 +1,9 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
-import 'package:uytaza/screen/history/history_screen.dart';
+import 'package:uytaza/screen/history/client_history_screen.dart';
+import 'package:uytaza/screen/history/cleaner_history_screen.dart';
+
 import 'package:uytaza/screen/home/home_screen.dart';
 import 'package:uytaza/screen/login/splash_screen.dart';
 import 'package:uytaza/screen/main/main_tab_page.dart';
@@ -9,6 +11,7 @@ import 'package:uytaza/screen/order/client/order_success_page.dart';
 import 'package:uytaza/screen/order/client/orders_screen.dart';
 import 'package:uytaza/screen/payment/payment_page.dart';
 import 'package:uytaza/screen/profile/rate_of_service_screen.dart';
+import 'package:uytaza/screen/profile/user_config.dart';
 import 'package:uytaza/screen/subscription/subscription_build_page.dart';
 import 'package:uytaza/screen/subscription/subscriptions_screen.dart';
 import 'package:uytaza/screen/subscription/subscription_edit_page.dart';
@@ -62,7 +65,15 @@ class MyApp extends StatelessWidget {
         '/order': (context) => const OrdersScreen(),
         '/new-sub': (context) => const SubscriptionBuildPage(),
         '/subscriptions': (context) => const SubscriptionsScreen(),
-        '/history': (ctx) => const HistoryScreen(),
+        '/history': (ctx) {
+          final role = ModalRoute.of(ctx)?.settings.arguments as UserRole?;
+          if (role == UserRole.cleaner) {
+            return const CleanerHistoryScreen();
+          } else {
+            return const ClientHistoryScreen();
+          }
+        },
+
         '/payment': (ctx) => const PaymentPage(
           entityType: '', // эти параметры будут переопределены при pushReplacement с аргументами
           entityId: '',
