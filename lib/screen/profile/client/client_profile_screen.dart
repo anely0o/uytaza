@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/api/api_routes.dart';
 import 'package:uytaza/screen/profile/settings_screen.dart';
+import '../../models/media_model.dart';
 import 'choose_address_screen.dart';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -17,6 +21,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _loading = true;
   String? _error;
+
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
@@ -51,12 +56,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
         setState(() {
           _initialData = Map<String, dynamic>.from(data);
           _emailController.text = data['Email'] ?? data['email'] ?? '';
-          _firstNameController.text =
-              data['FirstName'] ?? data['first_name'] ?? '';
-          _lastNameController.text =
-              data['LastName'] ?? data['last_name'] ?? '';
-          _phoneController.text =
-              data['PhoneNumber'] ?? data['phone_number'] ?? '';
+          _firstNameController.text = data['FirstName'] ?? data['first_name'] ?? '';
+          _lastNameController.text = data['LastName'] ?? data['last_name'] ?? '';
+          _phoneController.text = data['PhoneNumber'] ?? data['phone_number'] ?? '';
           _addressController.text = data['Address'] ?? data['address'] ?? '';
           _roleController.text = data['Role'] ?? data['role'] ?? 'Client';
 
@@ -74,9 +76,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           _selectedGender = gender;
         });
 
-        // Request gamification status (level + XP)
-        final statusRes =
-        await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+        final statusRes = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
         if (statusRes.statusCode == 200) {
           final sd = jsonDecode(statusRes.body) as Map<String, dynamic>;
           setState(() {
@@ -85,9 +85,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           });
         }
 
-        setState(() {
-          _loading = false;
-        });
+        setState(() => _loading = false);
       } else {
         setState(() => _error = 'Ошибка загрузки профиля: ${res.statusCode}');
       }
@@ -95,33 +93,25 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       setState(() => _error = 'Ошибка: $e');
     }
   }
-
   Future<void> _updateProfile() async {
     final updatedFields = <String, dynamic>{};
 
-    if (_firstNameController.text !=
-        (_initialData['FirstName'] ?? _initialData['first_name'] ?? '')) {
+    if (_firstNameController.text != (_initialData['FirstName'] ?? _initialData['first_name'] ?? '')) {
       updatedFields['first_name'] = _firstNameController.text;
     }
-    if (_lastNameController.text !=
-        (_initialData['LastName'] ?? _initialData['last_name'] ?? '')) {
+    if (_lastNameController.text != (_initialData['LastName'] ?? _initialData['last_name'] ?? '')) {
       updatedFields['last_name'] = _lastNameController.text;
     }
-    if (_phoneController.text !=
-        (_initialData['PhoneNumber'] ?? _initialData['phone_number'] ?? '')) {
+    if (_phoneController.text != (_initialData['PhoneNumber'] ?? _initialData['phone_number'] ?? '')) {
       updatedFields['phone_number'] = _phoneController.text;
     }
-    if (_addressController.text !=
-        (_initialData['Address'] ?? _initialData['address'] ?? '')) {
+    if (_addressController.text != (_initialData['Address'] ?? _initialData['address'] ?? '')) {
       updatedFields['address'] = _addressController.text;
     }
 
-    final oldDob = (_initialData['DateOfBirth'] ??
-        _initialData['date_of_birth'] ?? '')
-        .split('T')[0];
+    final oldDob = (_initialData['DateOfBirth'] ?? _initialData['date_of_birth'] ?? '').split('T')[0];
     if (_dobController.text != oldDob) {
-      if (_dobController.text.isNotEmpty &&
-          !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(_dobController.text)) {
+      if (_dobController.text.isNotEmpty && !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(_dobController.text)) {
         _showError('Неверный формат даты. Используйте ГГГГ-ММ-ДД');
         return;
       }
@@ -130,8 +120,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       }
     }
 
-    if (_selectedGender !=
-        (_initialData['Gender'] ?? _initialData['gender'] ?? '')) {
+    if (_selectedGender != (_initialData['Gender'] ?? _initialData['gender'] ?? '')) {
       updatedFields['gender'] = _selectedGender;
     }
 
@@ -141,28 +130,45 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     }
 
     try {
-      final response =
-      await ApiService.putWithToken('/api/auth/profile', updatedFields);
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Профиль обновлён')),
-        );
-        await _loadProfile();
-      } else {
-        final data = json.decode(response.body);
-        _showError(data['error'] ?? 'Ошибка обновления');
-      }
+      await ApiService.updateProfile(updatedFields);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Профиль обновлён')),
+      );
+      await _loadProfile();
     } catch (e) {
       _showError('Ошибка: $e');
     }
   }
+  Future<void> _pickNewAvatar() async {
+    final img = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (img == null) return;
+    try {
+      await ApiService.uploadAvatar(File(img.path));
+      await _loadProfile();
+      setState(() {
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Avatar updated')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Upload failed: $e')),
+      );
+    }
+  }
+  Future<Media?> _fetchLatestAvatar() async {
+    final res = await ApiService.getWithToken('/api/media/avatars');
+    if (res.statusCode != 200) return null;
+    final List body = jsonDecode(res.body) as List;
+    final medias = body.map((e) => Media.fromJson(e)).toList();
+    if (medias.isEmpty) return null;
+    return medias.last; // последний загруженный аватар
+  }
+
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -171,26 +177,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: TColor.primary,
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
+        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
 
     if (_error != null) {
       return Scaffold(
         backgroundColor: TColor.primary,
-        body: Center(
-          child: Text(
-            _error!,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
+        body: Center(child: Text(_error!, style: const TextStyle(color: Colors.white))),
       );
     }
 
-    final fullName =
-    (_firstNameController.text + ' ' + _lastNameController.text).trim();
+    final fullName = (_firstNameController.text + ' ' + _lastNameController.text).trim();
 
     return Scaffold(
       backgroundColor: TColor.primary,
@@ -201,34 +199,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(30)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                 boxShadow: TColor.softShadow,
               ),
               child: ListView(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 children: [
-                  _buildReadonlyTile(
-                    Icons.email,
-                    'Email',
-                    _emailController.text,
-                  ),
-                  _buildEditableField(
-                    Icons.person,
-                    'First Name',
-                    _firstNameController,
-                  ),
-                  _buildEditableField(
-                    Icons.person_outline,
-                    'Last Name',
-                    _lastNameController,
-                  ),
-                  _buildEditableField(
-                    Icons.phone,
-                    'Phone Number',
-                    _phoneController,
-                  ),
+                  _buildReadonlyTile(Icons.email, 'Email', _emailController.text),
+                  _buildEditableField(Icons.person, 'First Name', _firstNameController),
+                  _buildEditableField(Icons.person_outline, 'Last Name', _lastNameController),
+                  _buildEditableField(Icons.phone, 'Phone Number', _phoneController),
                   _buildAddressField(),
                   _buildDateField(),
                   _buildGenderField(),
@@ -249,16 +229,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                      '',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      )),
-                ),
+                const Expanded(child: SizedBox()),
                 IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
                   onPressed: () => Navigator.push(
@@ -270,13 +241,33 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person, size: 50, color: Colors.grey),
+
+          // <-- вот этот фрагмент заменяем -->
+          FutureBuilder<Media?>(
+            future: _fetchLatestAvatar(),
+            builder: (ctx, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const CircleAvatar(
+                  radius: 40,
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              }
+              final media = snap.data;
+              return GestureDetector(
+                onTap: _pickNewAvatar,
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundImage:
+                  media != null ? NetworkImage(media.url) : null,
+                  child: media == null
+                      ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                      : null,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
-          // Show level and XP above the name
+
           if (_currentLevel > 0 || _xpTotal > 0)
             Text(
               'Level $_currentLevel • XP $_xpTotal',
@@ -310,37 +301,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     final displayText = value.isNotEmpty ? value : "Нет данных";
     return ListTile(
       leading: Icon(icon, color: TColor.primary),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      subtitle: Text(
-        displayText,
-        style: TextStyle(color: TColor.textSecondary),
-      ),
+      title: Text(label, style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
+      subtitle: Text(displayText, style: TextStyle(color: TColor.textSecondary)),
     );
   }
 
-  Widget _buildEditableField(
-      IconData icon, String label, TextEditingController controller) {
-    final displayText =
-    controller.text.isNotEmpty ? controller.text : "Нет данных";
+  Widget _buildEditableField(IconData icon, String label, TextEditingController controller) {
+    final displayText = controller.text.isNotEmpty ? controller.text : "Нет данных";
     return ListTile(
       leading: Icon(icon, color: TColor.primary),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      subtitle: Text(
-        displayText,
-        style: TextStyle(color: TColor.textSecondary),
-      ),
+      title: Text(label, style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
+      subtitle: Text(displayText, style: TextStyle(color: TColor.textSecondary)),
       trailing: IconButton(
         icon: Icon(Icons.edit, color: TColor.primary),
         onPressed: () => _editFieldDialog(label, controller),
@@ -349,21 +320,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildAddressField() {
-    final displayValue =
-    _addressController.text.isNotEmpty ? _addressController.text : "Нет данных";
+    final displayValue = _addressController.text.isNotEmpty ? _addressController.text : "Нет данных";
     return ListTile(
       leading: Icon(Icons.location_on, color: TColor.primary),
-      title: Text(
-        'Address',
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      subtitle: Text(
-        displayValue,
-        style: TextStyle(color: TColor.textSecondary),
-      ),
+      title: Text('Address', style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
+      subtitle: Text(displayValue, style: TextStyle(color: TColor.textSecondary)),
       trailing: const Icon(Icons.chevron_right),
       onTap: () async {
         final res = await Navigator.push<String>(
@@ -379,21 +340,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildDateField() {
-    final displayValue =
-    _dobController.text.isNotEmpty ? _dobController.text : "Нет данных";
+    final displayValue = _dobController.text.isNotEmpty ? _dobController.text : "Нет данных";
     return ListTile(
       leading: Icon(Icons.cake, color: TColor.primary),
-      title: Text(
-        'Date of Birth',
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      subtitle: Text(
-        displayValue,
-        style: TextStyle(color: TColor.textSecondary),
-      ),
+      title: Text('Date of Birth', style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
+      subtitle: Text(displayValue, style: TextStyle(color: TColor.textSecondary)),
       trailing: const Icon(Icons.chevron_right),
       onTap: () async {
         final initialDate = _dobController.text.isNotEmpty
@@ -417,22 +368,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   Widget _buildGenderField() {
     return ListTile(
       leading: Icon(Icons.person_outline, color: TColor.primary),
-      title: Text(
-        'Gender',
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      title: Text('Gender', style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
       trailing: DropdownButton<String?>(
         value: _selectedGender,
         items: [
           const DropdownMenuItem<String?>(
             value: null,
-            child: Text(
-              "Не указано",
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: Text("Не указано", style: TextStyle(color: Colors.grey)),
           ),
           ..._genders.map((String value) {
             return DropdownMenuItem<String?>(
@@ -470,9 +412,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
               _updateProfile();
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: TColor.primary,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: TColor.primary),
             child: const Text('Save'),
           ),
         ],

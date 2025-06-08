@@ -8,6 +8,9 @@ class Order {
   final String? comment;
   final String status;
   final double? price;
+  final List<String>? photoUrls;
+  final bool hasReviewed;
+
 
   /// Дата, когда уборка должна быть выполнена
   final DateTime scheduledAt;
@@ -40,7 +43,11 @@ class Order {
     this.participants = const [],
     this.rating,
     this.reviews,
-  });
+    this.photoUrls,
+    this.hasReviewed = false,
+
+
+});
 
   // ───────────────── factory: из JSON ─────────────────
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -88,6 +95,10 @@ class Order {
       participants: _parseParticipants(),
       rating: (json['rating'] != null) ? (json['rating'] as num).toDouble() : null,
       reviews: _parseReviews(),
+
+      photoUrls: (json['photo_urls'] as List<dynamic>?)
+          ?.map((e) => e.toString()).toList(),
+      hasReviewed: json['has_reviewed'] as bool? ?? false,
     );
   }
 

@@ -45,6 +45,7 @@ dependencies:
   latlong2: ^0.9.1
   cupertino_icons: ^1.0.8
   badges: ^3.1.1
+  photo_view: ^0.14.0
 
 
 dev_dependencies:

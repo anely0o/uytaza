@@ -1,9 +1,11 @@
+// lib/screen/settings/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/common_widget/round_button.dart';
 import 'package:uytaza/screen/login/sign_in_screen.dart';
-import 'package:uytaza/api/api_service.dart';
+import 'package:uytaza/screen/profile/change_password_page.dart';
 import 'package:uytaza/screen/profile/about_us_screen.dart';
+import 'package:uytaza/api/api_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -15,12 +17,17 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
 
-
-
   void _navigateToAbout() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const AboutUsScreen()),
+    );
+  }
+
+  void _navigateToChangePassword() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChangePasswordPage()),
     );
   }
 
@@ -76,43 +83,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 20),
           children: [
-            _buildAboutTile(),
+            ListTile(
+              leading: Icon(Icons.info_outline, color: TColor.primary),
+              title: Text(
+                'About Us',
+                style: TextStyle(
+                  color: TColor.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _navigateToAbout,
+            ),
             const Divider(height: 1),
-            _buildLogoutTile(),
+            ListTile(
+              leading: Icon(Icons.lock_outline, color: TColor.primary),
+              title: Text(
+                'Change Password',
+                style: TextStyle(
+                  color: TColor.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _navigateToChangePassword,
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: Icon(Icons.logout, color: TColor.primary),
+              title: Text(
+                'Log Out',
+                style: TextStyle(
+                  color: TColor.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onTap: _logout,
+            ),
           ],
         ),
       ),
-    );
-  }
-
-
-
-  Widget _buildAboutTile() {
-    return ListTile(
-      leading: Icon(Icons.info_outline, color: TColor.primary),
-      title: Text(
-        'About Us',
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: _navigateToAbout,
-    );
-  }
-
-  Widget _buildLogoutTile() {
-    return ListTile(
-      leading: Icon(Icons.logout, color: TColor.primary),
-      title: Text(
-        'Log Out',
-        style: TextStyle(
-          color: TColor.textPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      onTap: _logout,
     );
   }
 }

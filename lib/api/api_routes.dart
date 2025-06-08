@@ -1,19 +1,34 @@
 // lib/api/api_routes.dart
 class ApiRoutes {
-  static const String services = '/api/services/active';
-  static const String orders   = '/api/orders';
-  static const String myOrders   = '/api/orders/my';
-  static const String subs     = '/api/subscriptions';
-  static const String notificationsCount = '/api/notifications';
-  static const String profile            = '/api/auth/profile';
-  static const cleanerOrders = '/api/orders/orders';
-  static const cleanerRating  = '/api/cleaner/rating';
+  // ───────── общие ─────────────────────────────────────────────
+  static const String services            = '/api/services/active';
+  static const String orders              = '/api/orders';
+  static const String myOrders            = '/api/orders/my';
+  static const String subs                = '/api/subscriptions';
+  static const String notificationsCount  = '/api/notifications';
+  static const String notificationsAll    = '/api/notifications';
+  static const String profile             = '/api/auth/profile';
+  static const String userById            = '/api/users';
+  static const String gamificationStatus  = '/api/users/gamification/status';
 
-  static const cleanerOrder     = '/api/orders/orders';      // + {id}
-  static const finishOrder      = '/api/orders/';      // + {id}/finish
-  static const ratingCleaner    = '/api/rating/cleaner/';      // + {id}
-  static const reviewsCleaner   = '/api/reviews/cleaner/';     // + {id}
-  static const notificationsAll = '/api/notifications';
-  static const userById = "/api/users";
-  static const String gamificationStatus = '/api/users/gamification/status';
+  // ───────── cleaner-flow ──────────────────────────────────────
+  static const String cleanerOrders   = '/api/orders/orders';
+  static const String cleanerOrder    = '/api/orders/orders';          // + /{id}
+  static const String finishOrder     = '/api/orders';                 // + /{id}/finish
+  static const String ratingCleaner   = '/api/rating/cleaner';         // + /{id}
+  static const String reviewsCleaner  = '/api/reviews/cleaner';        // + /{id}
+
+  // ───────── media ─────────────────────────────────────────────
+  static const String mediaByOrder = '/api/media/order';               // GET  /api/media/order/{orderId}
+  static const String mediaUpload  = '/api/media/report';              // POST /api/media/report/{orderId}
+  static const String rating = '/api/rating';
+
+  static const String avatarUpload   = '/api/media/avatar';     // POST multipart
+  static const String mediaReports   = '/api/media/reports';
+  // --- profile & auth ---
+  static const String profileUpdate  = '/api/auth/profile';     // PUT
+  static const String passwordChange = '/api/auth/password/change'; // PUT {old,new}
+  static const String passwordReset  = '/api/auth/password/reset';  // POST {email}
+
+
 }

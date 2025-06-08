@@ -1,5 +1,4 @@
-// lib/screen/main/main_tab_page.dart
-
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:badges/badges.dart' as badges;
@@ -26,6 +25,7 @@ class MainTabPage extends StatefulWidget {
 }
 
 class _MainTabPageState extends State<MainTabPage> {
+  late Timer _refreshTimer;
   int _selectedIndex = 0;
   bool _argsHandled = false;
 
@@ -40,7 +40,6 @@ class _MainTabPageState extends State<MainTabPage> {
   bool _loadingProfile = true;
 
   double? _rating;
-
   int _currentLevel = 0;
   int _xpTotal = 0;
 
@@ -50,6 +49,17 @@ class _MainTabPageState extends State<MainTabPage> {
     _loadUserRole();
     _loadUnread();
     _loadProfile();
+    // Обновляем профиль, рейтинг и уровень каждые 2 минуты
+    _refreshTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      _loadProfile();
+      if (_userRole == UserRole.cleaner) _loadCleanerStats();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer.cancel();
+    super.dispose();
   }
 
   @override
@@ -66,19 +76,15 @@ class _MainTabPageState extends State<MainTabPage> {
   Future<void> _loadUserRole() async {
     try {
       final role = await ApiService.getUserRole();
-      if (mounted) {
-        setState(() {
-          _userRole = role;
-          _loadingRole = false;
-        });
-      }
+      if (mounted) setState(() {
+        _userRole = role;
+        _loadingRole = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = '$e';
-          _loadingRole = false;
-        });
-      }
+      if (mounted) setState(() {
+        _error = '$e';
+        _loadingRole = false;
+      });
     }
   }
 
@@ -86,7 +92,7 @@ class _MainTabPageState extends State<MainTabPage> {
     try {
       final res = await ApiService.getWithToken(ApiRoutes.notificationsAll);
       if (res.statusCode == 200) {
-        final List<dynamic> decoded = jsonDecode(res.body);
+        final decoded = jsonDecode(res.body) as List<dynamic>;
         final unreadCount = decoded
             .whereType<Map<String, dynamic>>()
             .where((n) => (n['is_read'] as bool? ?? false) == false)
@@ -101,35 +107,32 @@ class _MainTabPageState extends State<MainTabPage> {
       final res = await ApiService.getWithToken(ApiRoutes.profile);
       if (res.statusCode == 200) {
         final m = jsonDecode(res.body) as Map<String, dynamic>;
-        _firstName = (m['FirstName'] ?? m['first_name'] ?? '').toString();
-        _lastName = (m['LastName'] ?? m['last_name'] ?? '').toString();
-        _address = (m['Address'] ?? m['address'] ?? '').toString();
-
+        _firstName = (m['first_name'] ?? '').toString();
+        _lastName = (m['last_name'] ?? '').toString();
+        _address = (m['address'] ?? '').toString();
+        // общий рейтинг и уровень
         if (_userRole == UserRole.cleaner) {
-          final cleanerId = (m['id'] ?? '').toString();
-          if (cleanerId.isNotEmpty) {
-            final rateRes = await ApiService.getWithToken(
-              '${ApiRoutes.ratingCleaner}$cleanerId',
-            );
-            if (rateRes.statusCode == 200) {
-              final rd = jsonDecode(rateRes.body) as Map<String, dynamic>;
-              _rating = (rd['rating'] ?? 0).toDouble();
-            }
-          }
+          _rating = (m['average_rating'] as num?)?.toDouble() ?? 0;
         }
-
-        try {
-          final gamRes =
-          await ApiService.getWithToken(ApiRoutes.gamificationStatus);
-          if (gamRes.statusCode == 200) {
-            final gd = jsonDecode(gamRes.body) as Map<String, dynamic>;
-            _currentLevel = (gd['current_level'] as num).toInt();
-            _xpTotal = (gd['xp_total'] as num).toInt();
-          }
-        } catch (_) {}
+        _currentLevel = (m['current_level'] as num?)?.toInt() ?? _currentLevel;
+        _xpTotal = (m['xp_total'] as num?)?.toInt() ?? _xpTotal;
       }
     } catch (_) {}
     if (mounted) setState(() => _loadingProfile = false);
+  }
+
+  // Вспомогательный метод для загрузки статики клинера
+  Future<void> _loadCleanerStats() async {
+    try {
+      final gamRes = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+      if (gamRes.statusCode == 200) {
+        final gd = jsonDecode(gamRes.body) as Map<String, dynamic>;
+        if (mounted) setState(() {
+          _currentLevel = (gd['current_level'] as num).toInt();
+          _xpTotal = (gd['xp_total'] as num).toInt();
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -227,7 +230,12 @@ class _MainTabPageState extends State<MainTabPage> {
           : AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        title: const SizedBox.shrink(),
+        title: (_userRole == UserRole.client && _address != null && _address!.isNotEmpty)
+            ? Text(
+          _address!,
+          style: TextStyle(color: TColor.textPrimary, fontSize: 14),
+        )
+            : const SizedBox.shrink(),
         centerTitle: true,
         iconTheme: IconThemeData(color: TColor.primary),
         actions: [
@@ -258,6 +266,7 @@ class _MainTabPageState extends State<MainTabPage> {
           ),
         ],
       ),
+
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
