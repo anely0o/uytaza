@@ -6,7 +6,7 @@ import '../screen/profile/user_config.dart';
 import 'api_routes.dart';
 
 class ApiService {
-  static const String baseUrl = "http://10.0.2.2:8080";
+  static const String baseUrl = "http://172.20.10.5:8080 ";
 
   static Future<http.Response> post(String endpoint, dynamic body) async {
     return await http.post(
@@ -144,7 +144,7 @@ class ApiService {
       avatars.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final rawUrl = avatars.first.URL;
       // тут и применяем фиксацию хоста
-      return rawUrl.replaceFirst('localhost:9000', '10.0.2.2:9000');
+      return rawUrl.replaceFirst('localhost:9000', '172.20.10.5:9000');
     } catch (e) {
       print('Error getting latest avatar: $e');
       return null;

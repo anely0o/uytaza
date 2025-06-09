@@ -48,7 +48,7 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
 
   // Метод для исправления URL хоста
   String _fixHost(String url) {
-    return url.replaceFirst('localhost:9000', '10.0.2.2:9000');
+    return url.replaceFirst('localhost:9000', '172.20.10.5:9000');
   }
 
   // Метод для загрузки фотографий заказа

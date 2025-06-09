@@ -22,7 +22,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   String? _err;
 
   String _fixHost(String url) =>
-      url.replaceFirst('localhost:9000', '10.0.2.2:9000');
+      url.replaceFirst('localhost:9000', '172.20.10.5:9000');
 
   Future<void> _pickImages() async {
     final picked = await _picker.pickMultiImage(imageQuality: 80);
@@ -51,7 +51,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
       final photoUrl = await ApiService.uploadReport(widget.orderId, file);
 
       // Исправляем URL для локального эмулятора
-      final fixedUrl = photoUrl.replaceFirst('localhost:9000', '10.0.2.2:9000');
+      final fixedUrl = photoUrl.replaceFirst('localhost:9000', '172.20.10.5:9000');
 
       // 2) Подтверждаем завершение заказа с URL фото
       final resp = await ApiService.confirmCompletion(widget.orderId, fixedUrl);
