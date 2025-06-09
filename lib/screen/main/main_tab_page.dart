@@ -191,59 +191,69 @@ class _MainTabPageState extends State<MainTabPage> {
     return Scaffold(
       drawer: Drawer(
         backgroundColor: Colors.white,
-        child: ListView(
-          padding: const EdgeInsets.only(top: 40, left: 16, right: 16),
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: Colors.white),
-              child: _loadingProfile
-                  ? const Center(child: CircularProgressIndicator())
-                  : (_userRole == UserRole.client
-                  ? _buildClientHeader()
-                  : _buildCleanerHeader()),
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Colors.grey),
-              title: const Text('History'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => _userRole == UserRole.cleaner
-                        ? const CleanerHistoryScreen()
-                        : const ClientHistoryScreen(),
+        child: SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  child: _loadingProfile
+                      ? const Center(child: CircularProgressIndicator())
+                      : (_userRole == UserRole.client
+                      ? _buildClientHeader()
+                      : _buildCleanerHeader()),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: const SizedBox(height: 16),
+              ),
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  ListTile(
+                    leading: const Icon(Icons.history, color: Colors.grey),
+                    title: const Text('History'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => _userRole == UserRole.cleaner
+                              ? const CleanerHistoryScreen()
+                              : const ClientHistoryScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-            if (_userRole == UserRole.client) ...[
-              ListTile(
-                leading: const Icon(Icons.repeat, color: Colors.grey),
-                title: const Text('My Subscriptions'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const SubscriptionsScreen()),
-                  );
-                },
+                  if (_userRole == UserRole.client) ...[
+                    ListTile(
+                      leading: const Icon(Icons.repeat, color: Colors.grey),
+                      title: const Text('My Subscriptions'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const SubscriptionsScreen()),
+                        );
+                      },
+                    ),
+                  ],
+                  ListTile(
+                    leading: const Icon(Icons.support_agent, color: Colors.grey),
+                    title: const Text('Support'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SupportHomeScreen()),
+                      );
+                    },
+                  ),
+                ]),
               ),
             ],
-            ListTile(
-              leading: const Icon(Icons.support_agent, color: Colors.grey),
-              title: const Text('Support'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const SupportHomeScreen()),
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
       appBar: (_selectedIndex == 2)
@@ -379,6 +389,7 @@ class _MainTabPageState extends State<MainTabPage> {
     final progress = xpForCurrentLevel / 100.0;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Имя и фамилия
@@ -389,6 +400,8 @@ class _MainTabPageState extends State<MainTabPage> {
             fontWeight: FontWeight.bold,
             color: TColor.textPrimary,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 8),
 
@@ -409,7 +422,7 @@ class _MainTabPageState extends State<MainTabPage> {
                     fontSize: 14,
                     color: TColor.textSecondary,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -419,21 +432,33 @@ class _MainTabPageState extends State<MainTabPage> {
         ],
 
         // Уровень и XP
-        Text(
-          'Level $_currentLevel',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: TColor.textPrimary,
-          ),
+        Row(
+          children: [
+            Icon(Icons.star, size: 16, color: TColor.primary),
+            const SizedBox(width: 4),
+            Text(
+              'Level $_currentLevel',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: TColor.textPrimary,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
-        Text(
-          'XP: $xpForCurrentLevel/100',
-          style: TextStyle(
-            fontSize: 12,
-            color: TColor.textSecondary,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'XP: $xpForCurrentLevel/100',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: TColor.textSecondary,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
         ClipRRect(
@@ -455,6 +480,7 @@ class _MainTabPageState extends State<MainTabPage> {
     final progress = xpForCurrentLevel / 100.0;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Имя и фамилия
@@ -465,14 +491,16 @@ class _MainTabPageState extends State<MainTabPage> {
             fontWeight: FontWeight.bold,
             color: TColor.textPrimary,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 8),
 
-        // Рейтинг со звездами
+        // Рейтинг со звездами - сделаем более компактным
         Row(
           children: [
-            ..._buildStarIcons(_rating),
-            const SizedBox(width: 8),
+            Icon(Icons.star, color: Colors.amber, size: 16),
+            const SizedBox(width: 4),
             Text(
               '${_rating.toStringAsFixed(1)}',
               style: TextStyle(
@@ -485,22 +513,34 @@ class _MainTabPageState extends State<MainTabPage> {
         ),
         const SizedBox(height: 12),
 
-        // Уровень и XP
-        Text(
-          'Level $_currentLevel',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: TColor.textPrimary,
-          ),
+        // Уровень и XP - более компактно
+        Row(
+          children: [
+            Icon(Icons.military_tech, size: 16, color: TColor.primary),
+            const SizedBox(width: 4),
+            Text(
+              'Level $_currentLevel',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: TColor.textPrimary,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
-        Text(
-          'XP: $xpForCurrentLevel/100',
-          style: TextStyle(
-            fontSize: 12,
-            color: TColor.textSecondary,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'XP: $xpForCurrentLevel/100',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: TColor.textSecondary,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
         ClipRRect(
@@ -514,27 +554,5 @@ class _MainTabPageState extends State<MainTabPage> {
         ),
       ],
     );
-  }
-
-  /// Генерация звезд для рейтинга
-  List<Widget> _buildStarIcons(double rating) {
-    const totalStars = 5;
-    int full = rating.floor();
-    bool hasHalf = (rating - full) >= 0.5;
-    List<Widget> stars = [];
-
-    for (int i = 0; i < full; i++) {
-      stars.add(const Icon(Icons.star, color: Colors.amber, size: 18));
-    }
-
-    if (hasHalf) {
-      stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 18));
-    }
-
-    while (stars.length < totalStars) {
-      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 18));
-    }
-
-    return stars;
   }
 }

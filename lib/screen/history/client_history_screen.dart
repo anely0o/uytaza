@@ -27,6 +27,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen>
   String? _error;
   List<Order> _orders = [];
   List<Subscription> _cancelledSubs = [];
+  String baseUrl = ApiService.baseUrl;
 
   @override
   void initState() {
@@ -92,7 +93,7 @@ class _ClientHistoryScreenState extends State<ClientHistoryScreen>
 
   // Метод для исправления URL хоста
   String _fixHost(String url) {
-    return url.replaceFirst('localhost:9000', '172.20.10.5:9000');
+    return url.replaceFirst('localhost:9000', '$baseUrl:9000');
   }
 
   Future<void> _pickNewAvatar() async {

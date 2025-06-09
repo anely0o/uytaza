@@ -21,7 +21,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   final _lastNameCtl  = TextEditingController();
   final _phoneCtl     = TextEditingController();
   final _dobCtl       = TextEditingController();
-
+  String baseUrl = ApiService.baseUrl;
   // gender
   String? _selectedGender;
   final _genders = ['male', 'female', 'other'];
@@ -97,7 +97,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   }
 
   String _fixHost(String url) {
-    return url.replaceFirst('localhost:9000', '172.20.10.5:9000');
+    return url.replaceFirst('localhost:9000', '$baseUrl:9000');
   }
 
   Future<String?> _fetchLatestAvatarUrl() async {
