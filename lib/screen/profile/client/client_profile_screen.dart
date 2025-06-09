@@ -139,31 +139,36 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       _showError('Ошибка: $e');
     }
   }
+  String _fixHost(String url) {
+    return url.replaceFirst('localhost:9000', '10.0.2.2:9000');
+  }
+
+  Future<String?> _fetchLatestAvatarUrl() async {
+    try {
+      final rawUrl = await ApiService.getLatestAvatarUrl();
+      if (rawUrl == null) return null;
+      // Вот тут и «чините» хост
+      return _fixHost(rawUrl);
+    } catch (e) {
+      print('Error fetching avatar: $e');
+      return null;
+    }
+  }
+
   Future<void> _pickNewAvatar() async {
     final img = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (img == null) return;
     try {
       await ApiService.uploadAvatar(File(img.path));
-      await _loadProfile();
-      setState(() {
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Avatar updated')),
-      );
+      setState(() { /* trigger reload */ });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Avatar updated')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Upload failed: $e')));
     }
   }
-  Future<Media?> _fetchLatestAvatar() async {
-    final res = await ApiService.getWithToken('/api/media/avatars');
-    if (res.statusCode != 200) return null;
-    final List body = jsonDecode(res.body) as List;
-    final medias = body.map((e) => Media.fromJson(e)).toList();
-    if (medias.isEmpty) return null;
-    return medias.last; // последний загруженный аватар
-  }
+
 
 
   void _showError(String message) {
@@ -242,24 +247,27 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           ),
           const SizedBox(height: 10),
 
-          // <-- вот этот фрагмент заменяем -->
-          FutureBuilder<Media?>(
-            future: _fetchLatestAvatar(),
+          FutureBuilder<String?>(
+            future: _fetchLatestAvatarUrl(),
             builder: (ctx, snap) {
+              if (snap.hasError) {
+                return Text('Error: ${snap.error}');
+              }
               if (snap.connectionState != ConnectionState.done) {
                 return const CircleAvatar(
                   radius: 40,
                   child: CircularProgressIndicator(color: Colors.white),
                 );
               }
-              final media = snap.data;
+              final URL = snap.data;
+              print('Avatar URL = $URL');
               return GestureDetector(
                 onTap: _pickNewAvatar,
                 child: CircleAvatar(
                   radius: 40,
                   backgroundImage:
-                  media != null ? NetworkImage(media.url) : null,
-                  child: media == null
+                  URL != null ? NetworkImage(URL) : null,
+                  child: URL == null
                       ? const Icon(Icons.person, size: 50, color: Colors.grey)
                       : null,
                 ),

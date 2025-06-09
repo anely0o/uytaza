@@ -111,9 +111,45 @@ class ApiService {
 
   // --------- Media & Review Methods ---------
   /// Fetch list of photo URLs for an order
-  static Future<http.Response> getMediaByOrder(String orderId) async {
-    return await getWithToken('${ApiRoutes.mediaByOrder}/$orderId');
+  static Future<List<Media>> getMediaByOrder(String orderId) async {
+    final response = await getWithToken('${ApiRoutes.mediaReports}/$orderId');
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((json) => Media.fromJson(json)).toList();
+    }
+    throw Exception('Failed to load media for order $orderId: ${response.statusCode}');
   }
+
+  // Добавь новый метод для получения аватарок
+  static Future<List<Media>> getAvatars() async {
+
+    final response = await getWithToken(ApiRoutes.getAvatars);
+
+    print('GETAvatars (${response.statusCode}): ${response.body}');
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((json) => Media.fromJson(json)).toList();
+    }
+    throw Exception('Failed to load avatars: ${response.statusCode}');
+  }
+
+  // Добавь метод для получения последнего аватара
+  static Future<String?> getLatestAvatarUrl() async {
+    try {
+      final avatars = await getAvatars();
+      if (avatars.isEmpty) return null;
+      // Сортируем по дате
+      avatars.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final rawUrl = avatars.first.URL;
+      // тут и применяем фиксацию хоста
+      return rawUrl.replaceFirst('localhost:9000', '10.0.2.2:9000');
+    } catch (e) {
+      print('Error getting latest avatar: $e');
+      return null;
+    }
+  }
+
 
   static Future<List<String>> uploadMediaAndGetUrls(
       String orderId, List<File> files) async {
@@ -134,10 +170,10 @@ class ApiService {
       }
 
       final Map<String, dynamic> body = jsonDecode(resp.body);
-      if (body['url'] == null) {
+      if (body['URL'] == null) {
         throw Exception('No URL returned from media-service');
       }
-      urls.add(body['url'].toString());
+      urls.add(body['URL'].toString());
     }
 
     return urls;
@@ -327,5 +363,19 @@ class ApiService {
       print('JSON decode error: $e');
       return null;
     }
+  }
+}
+
+class Media {
+  final String URL;
+  final DateTime createdAt;
+
+  Media({required this.URL, required this.createdAt});
+
+  factory Media.fromJson(Map<String, dynamic> json) {
+    return Media(
+      URL: json['URL'] as String,
+      createdAt: DateTime.parse(json['CreatedAt'] as String),
+    );
   }
 }

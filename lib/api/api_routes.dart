@@ -20,15 +20,15 @@ class ApiRoutes {
 
   // ───────── media ─────────────────────────────────────────────
   static const String mediaByOrder = '/api/media/order';               // GET  /api/media/order/{orderId}
-  static const String mediaUpload  = '/api/media/report';              // POST /api/media/report/{orderId}
+  static const String mediaUpload    = '/api/media/report';         // POST /api/media/report/{orderId}
   static const String rating = '/api/rating';
 
-  static const String avatarUpload   = '/api/media/avatar';     // POST multipart
-  static const String mediaReports   = '/api/media/reports';
+  static const String avatarUpload   = '/api/media/avatar';         // POST /api/media/avatar
+  static const String mediaReports   = '/api/media/reports';        // GET  /api/media/reports/{orderId}
   // --- profile & auth ---
   static const String profileUpdate  = '/api/auth/profile';     // PUT
   static const String passwordChange = '/api/auth/password/change'; // PUT {old,new}
   static const String passwordReset  = '/api/auth/password/reset';  // POST {email}
-
+  static const String getAvatars   = '/api/media/avatars';
 
 }
