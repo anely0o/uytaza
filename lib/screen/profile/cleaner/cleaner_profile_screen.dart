@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart';
 import 'package:uytaza/common/color_extension.dart';
 import 'package:uytaza/api/api_service.dart';
 import 'package:uytaza/api/api_routes.dart';
@@ -18,25 +16,27 @@ class CleanerProfileScreen extends StatefulWidget {
 }
 
 class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
-  final TextEditingController _firstNameCtl = TextEditingController();
-  final TextEditingController _lastNameCtl = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _dobController = TextEditingController();
+  // controllers
+  final _firstNameCtl = TextEditingController();
+  final _lastNameCtl  = TextEditingController();
+  final _phoneCtl     = TextEditingController();
+  final _dobCtl       = TextEditingController();
 
+  // gender
   String? _selectedGender;
-  final List<String> _genders = ['male', 'female', 'other'];
+  final _genders = ['male', 'female', 'other'];
 
+  // data
   Map<String, dynamic> _initialData = {};
-
-  int _currentLevel = 0;
-  int _xpTotal = 0;
-  double _rating = 0.0;
-  int _jobsDone = 0;
+  int    _currentLevel    = 0;
+  int    _xpTotal         = 0;
+  double _rating          = 0.0;
+  int    _reviewsCount        = 0;
   double _experienceYears = 0.0;
-  bool _loading = true;
+
+
+  bool   _loading = true;
   String? _error;
-  String? _avatarUrl;
-  String _email = '';
 
   @override
   void initState() {
@@ -45,43 +45,38 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   }
 
   Future<void> _loadCleanerInfo() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
+    setState(() { _loading = true; _error = null; });
     try {
-      final profileRes = await ApiService.getWithToken(ApiRoutes.profile);
-      if (profileRes.statusCode != 200) throw 'Error ${profileRes.statusCode}';
+      final res = await ApiService.getWithToken(ApiRoutes.profile);
+      if (res.statusCode != 200) {
+        throw Exception('Profile error ${res.statusCode}');
+      }
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      _initialData = data;
 
-      final profileData = jsonDecode(profileRes.body) as Map<String, dynamic>;
-      _initialData = profileData;
-      _firstNameCtl.text = profileData['first_name'] ?? '';
-      _lastNameCtl.text = profileData['last_name'] ?? '';
-      _phoneController.text = profileData['phone_number'] ?? '';
-      _email = profileData['email'] ?? '';
-      _avatarUrl = profileData['avatar_url']?.toString();
+      // учитываем оба варианта ключей
+      _firstNameCtl.text = data['FirstName']      ?? data['first_name']    ?? '';
+      _lastNameCtl.text  = data['LastName']       ?? data['last_name']     ?? '';
+      _phoneCtl.text     = data['PhoneNumber']    ?? data['phone_number']  ?? '';
+      final dobRaw       = data['DateOfBirth']    ?? data['date_of_birth'] ?? '';
+      _dobCtl.text       = (dobRaw as String).split('T')[0];
+      final genderRaw    = data['Gender']         ?? data['gender'];
+      _selectedGender    = _genders.contains(genderRaw) ? genderRaw : null;
 
-      String dob = profileData['date_of_birth'] ?? '';
-      if (dob.isNotEmpty) dob = dob.split('T')[0];
-      _dobController.text = dob;
+      _rating       = (data['average_rating'] as num?)?.toDouble() ?? 0.0;
+      _reviewsCount = (data['rating_count']   as num?)?.toInt()    ?? 0;
 
-      _selectedGender = _genders.contains(profileData['gender']) ? profileData['gender'] : null;
-
-      _rating = (profileData['average_rating'] as num?)?.toDouble() ?? 0.0;
-      _jobsDone = (profileData['jobs_done'] as num?)?.toInt() ?? 0;
-      _experienceYears = (profileData['experience_years'] as num?)?.toDouble() ?? 0.0;
-
-      final statusRes = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
-      if (statusRes.statusCode == 200) {
-        final sd = jsonDecode(statusRes.body) as Map<String, dynamic>;
+      // уровень и XP
+      final stat = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+      if (stat.statusCode == 200) {
+        final sd = jsonDecode(stat.body) as Map<String, dynamic>;
         _currentLevel = (sd['current_level'] as num).toInt();
-        _xpTotal = (sd['xp_total'] as num).toInt();
+        _xpTotal      = (sd['xp_total']     as num).toInt();
       }
     } catch (e) {
       _error = e.toString();
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; });
     }
   }
 
@@ -90,58 +85,64 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     if (img == null) return;
     try {
       await ApiService.uploadAvatar(File(img.path));
-      setState(() => _avatarUrl = null);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Avatar updated')));
+      setState(() {}); // обновить FutureBuilder
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Avatar updated'))
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e'))
+      );
     }
   }
 
-  Future<ImageProvider?> _loadAvatarWithToken() async {
-    final token = await ApiService.getToken();
-    if (token == null) return null;
-    final uri = Uri.parse('${ApiService.baseUrl}/media/avatars');
-    final client = HttpClient();
-    final request = await client.getUrl(uri);
-    request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-    final response = await request.close();
-    if (response.statusCode == 200) {
-      final bytes = await consolidateHttpClientResponseBytes(response);
-      return MemoryImage(bytes);
+  String _fixHost(String url) {
+    return url.replaceFirst('localhost:9000', '10.0.2.2:9000');
+  }
+
+  Future<String?> _fetchLatestAvatarUrl() async {
+    try {
+      final raw = await ApiService.getLatestAvatarUrl();
+      return raw == null ? null : _fixHost(raw);
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   Future<void> _updateProfile() async {
-    final updated = <String, dynamic>{};
-
+    final upd = <String,dynamic>{};
     if (_firstNameCtl.text != (_initialData['first_name'] ?? '')) {
-      updated['first_name'] = _firstNameCtl.text;
+      upd['first_name'] = _firstNameCtl.text;
     }
     if (_lastNameCtl.text != (_initialData['last_name'] ?? '')) {
-      updated['last_name'] = _lastNameCtl.text;
+      upd['last_name'] = _lastNameCtl.text;
     }
-    if (_phoneController.text != (_initialData['phone_number'] ?? '')) {
-      updated['phone_number'] = _phoneController.text;
+    if (_phoneCtl.text != (_initialData['phone_number'] ?? '')) {
+      upd['phone_number'] = _phoneCtl.text;
     }
-    if (_dobController.text != (_initialData['date_of_birth'] ?? '').split('T')[0]) {
-      updated['date_of_birth'] = '${_dobController.text}T00:00:00Z';
+    final oldDob = (_initialData['date_of_birth'] as String? ?? '').split('T')[0];
+    if (_dobCtl.text != oldDob) {
+      upd['date_of_birth'] = '${_dobCtl.text}T00:00:00Z';
     }
     if (_selectedGender != (_initialData['gender'] ?? '')) {
-      updated['gender'] = _selectedGender;
+      upd['gender'] = _selectedGender;
     }
-
-    if (updated.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No changes')));
+    if (upd.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No changes'))
+      );
       return;
     }
-
     try {
-      await ApiService.updateProfile(updated);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated')));
+      await ApiService.updateProfile(upd);
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated'))
+      );
       await _loadCleanerInfo();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Update failed: $e'))
+      );
     }
   }
 
@@ -150,23 +151,28 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     if (_loading) {
       return Scaffold(
         backgroundColor: TColor.primary,
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
     if (_error != null) {
       return Scaffold(
         backgroundColor: TColor.primary,
-        body: Center(child: Text(_error!, style: const TextStyle(color: Colors.white))),
+        body: Center(
+          child: Text(_error!, style: const TextStyle(color: Colors.white)),
+        ),
       );
     }
 
-    final fullName = (_firstNameCtl.text + ' ' + _lastNameCtl.text).trim();
+    final fullName = '${_firstNameCtl.text} ${_lastNameCtl.text}'.trim();
+    final email    = _initialData['email'] as String? ?? '';
 
     return Scaffold(
       backgroundColor: TColor.primary,
       body: Column(
         children: [
-          _buildHeader(fullName),
+          _buildHeader(fullName, email),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -180,12 +186,10 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
                   _buildRatingTile(),
                   const SizedBox(height: 16),
                   _buildEditableField(Icons.person, 'First Name', _firstNameCtl),
-                  _buildEditableField(Icons.person_outline, 'Last Name', _lastNameCtl),
-                  _buildEditableField(Icons.phone, 'Phone Number', _phoneController),
+                  _buildEditableField(Icons.person_outline, 'Last Name',  _lastNameCtl),
+                  _buildEditableField(Icons.phone, 'Phone', _phoneCtl),
                   _buildDateField(),
                   _buildGenderField(),
-                  const SizedBox(height: 30),
-                  _buildNavigationTile(),
                 ],
               ),
             ),
@@ -195,7 +199,7 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     );
   }
 
-  Widget _buildHeader(String fullName) {
+  Widget _buildHeader(String fullName, String email) {
     return SafeArea(
       child: Column(
         children: [
@@ -214,64 +218,83 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          FutureBuilder<ImageProvider?>(
-            future: _loadAvatarWithToken(),
-            builder: (context, snapshot) {
-              final image = snapshot.data;
+          FutureBuilder<String?>(
+            future: _fetchLatestAvatarUrl(),
+            builder: (ctx, snap) {
+              if (snap.hasError) {
+                return Text('Error: ${snap.error}',
+                    style: const TextStyle(color: Colors.white));
+              }
+              if (snap.connectionState != ConnectionState.done) {
+                return const CircleAvatar(
+                  radius: 40,
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              }
+              final url = snap.data;
               return GestureDetector(
                 onTap: _pickNewAvatar,
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundImage: image,
-                  child: image == null ? const Icon(Icons.person, size: 50, color: Colors.grey) : null,
+                  backgroundImage: url != null ? NetworkImage(url) : null,
+                  child: url == null
+                      ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                      : null,
                 ),
               );
             },
           ),
           const SizedBox(height: 12),
           if (_currentLevel > 0 || _xpTotal > 0)
-            Text('Level $_currentLevel • XP $_xpTotal', style: const TextStyle(color: Colors.white70)),
-          if (_currentLevel > 0 || _xpTotal > 0) const SizedBox(height: 4),
-          Text(fullName.isNotEmpty ? fullName : 'Not specified', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+            Text('Level $_currentLevel • XP $_xpTotal',
+                style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 4),
-          Text(_email, style: const TextStyle(color: Colors.white70)),
+          Text(fullName.isNotEmpty ? fullName : 'Not specified',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          const Text("Cleaner", style: TextStyle(color: Colors.white70, fontSize: 16)),
+          Text(email, style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  Widget _buildEditableField(IconData icon, String label, TextEditingController controller) {
+  Widget _buildEditableField(
+      IconData icon, String label, TextEditingController ctl) {
     return ListTile(
       leading: Icon(icon, color: TColor.primary),
-      title: Text(label, style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
-      subtitle: Text(controller.text.isNotEmpty ? controller.text : 'Not specified', style: TextStyle(color: TColor.textSecondary)),
+      title: Text(label,
+          style:
+          TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
+      subtitle: Text(
+        ctl.text.isNotEmpty ? ctl.text : 'Not specified',
+        style: TextStyle(color: TColor.textSecondary),
+      ),
       trailing: IconButton(
         icon: Icon(Icons.edit, color: TColor.primary),
-        onPressed: () => _editFieldDialog(label, controller),
+        onPressed: () => _showEditDialog(label, ctl),
       ),
     );
   }
 
-  void _editFieldDialog(String label, TextEditingController controller) {
+  void _showEditDialog(String label, TextEditingController ctl) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text('Edit $label'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(hintText: 'Enter $label'),
-        ),
+        content:
+        TextField(controller: ctl, decoration: InputDecoration(hintText: label)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
+              Navigator.pop(ctx);
               _updateProfile();
-              Navigator.pop(context);
             },
+            style: ElevatedButton.styleFrom(backgroundColor: TColor.primary),
             child: const Text('Save'),
           ),
         ],
@@ -283,19 +306,23 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
     return ListTile(
       leading: Icon(Icons.cake, color: TColor.primary),
       title: const Text('Date of Birth'),
-      subtitle: Text(_dobController.text.isNotEmpty ? _dobController.text : 'Not specified', style: TextStyle(color: TColor.textSecondary)),
+      subtitle: Text(
+        _dobCtl.text.isNotEmpty ? _dobCtl.text : 'Not specified',
+        style: TextStyle(color: TColor.textSecondary),
+      ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () async {
-        final initialDate = _dobController.text.isNotEmpty ? DateTime.parse(_dobController.text) : DateTime.now();
+        final initial = _dobCtl.text.isNotEmpty
+            ? DateTime.parse(_dobCtl.text)
+            : DateTime.now();
         final picked = await showDatePicker(
           context: context,
-          initialDate: initialDate,
+          initialDate: initial,
           firstDate: DateTime(1900),
           lastDate: DateTime.now(),
         );
         if (picked != null) {
-          final dateStr = picked.toIso8601String().split('T')[0];
-          setState(() => _dobController.text = dateStr);
+          _dobCtl.text = picked.toIso8601String().split('T')[0];
           _updateProfile();
         }
       },
@@ -310,7 +337,9 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
         value: _selectedGender,
         items: [
           const DropdownMenuItem(value: null, child: Text('Not specified')),
-          ..._genders.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+          ..._genders
+              .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+              .toList(),
         ],
         onChanged: (val) {
           setState(() => _selectedGender = val);
@@ -323,32 +352,26 @@ class _CleanerProfileScreenState extends State<CleanerProfileScreen> {
   Widget _buildRatingTile() {
     return ListTile(
       leading: Icon(Icons.star, color: TColor.primary),
-      title: Text("Rating: ${_rating.toStringAsFixed(1)}", style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
+      title: Text('Rating: ${_rating.toStringAsFixed(1)}',
+          style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
       subtitle: Row(
-        children: List.generate(5, (i) => Icon(i < _rating.round() ? Icons.star : Icons.star_border, color: TColor.accent, size: 20)),
+        children: List.generate(5, (i) {
+          return Icon(
+            i < _rating.round() ? Icons.star : Icons.star_border,
+            color: TColor.accent,
+            size: 20,
+          );
+        }),
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('Jobs: $_jobsDone', style: TextStyle(color: TColor.textSecondary)),
+          Text('Jobs: $_reviewsCount', style: TextStyle(color: TColor.textSecondary)),
           const SizedBox(height: 4),
-          Text('Exp: ${_experienceYears.toStringAsFixed(1)} y', style: TextStyle(color: TColor.textSecondary)),
+          Text('Exp: ${_experienceYears.toStringAsFixed(1)} y',
+              style: TextStyle(color: TColor.textSecondary)),
         ],
       ),
-    );
-  }
-
-  Widget _buildNavigationTile() {
-    return Column(
-      children: [
-        const Divider(),
-        ListTile(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerOrdersScreen())),
-          leading: Icon(Icons.history, color: TColor.primary),
-          title: Text("History", style: TextStyle(color: TColor.textPrimary, fontWeight: FontWeight.bold)),
-          trailing: Icon(Icons.chevron_right, color: TColor.textPrimary),
-        ),
-      ],
     );
   }
 }

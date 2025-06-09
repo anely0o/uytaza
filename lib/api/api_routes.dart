@@ -20,7 +20,7 @@ class ApiRoutes {
 
   // ───────── media ─────────────────────────────────────────────
   static const String mediaByOrder = '/api/media/order';               // GET  /api/media/order/{orderId}
-  static const String mediaUpload    = '/api/media/report';         // POST /api/media/report/{orderId}
+  static const String uploadReport    = '/api/media/report';         // POST /api/media/report/{orderId}
   static const String rating = '/api/rating';
 
   static const String avatarUpload   = '/api/media/avatar';         // POST /api/media/avatar

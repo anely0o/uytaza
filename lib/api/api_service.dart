@@ -31,6 +31,23 @@ class ApiService {
       },
     );
   }
+  static Future<String?> uploadReport(String orderId, File file) async {
+    final uri = Uri.parse('${ApiRoutes.uploadReport}/$orderId');
+    final request = http.MultipartRequest('POST', uri);
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    // если нужен токен:
+    // request.headers['Authorization'] = 'Bearer $token';
+    final streamed = await request.send();
+    final body = await streamed.stream.bytesToString();
+    if (streamed.statusCode >= 200 && streamed.statusCode < 300) {
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      return data['url'] as String?;
+    } else {
+      throw Exception('Report upload failed: ${streamed.statusCode} $body');
+    }
+  }
+
+
 
   static Future<http.Response> postWithToken(String endpoint, dynamic body) async {
     final token = await getToken();
@@ -151,33 +168,7 @@ class ApiService {
   }
 
 
-  static Future<List<String>> uploadMediaAndGetUrls(
-      String orderId, List<File> files) async {
-    final token = await getToken();
-    final uri = Uri.parse('$baseUrl${ApiRoutes.mediaUpload}/$orderId');
-    List<String> urls = [];
 
-    for (var f in files) {
-      final req = http.MultipartRequest('POST', uri)
-        ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath('file', f.path));
-
-      final streamed = await req.send();
-      final resp = await http.Response.fromStream(streamed);
-
-      if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        throw Exception('Upload failed (${resp.statusCode}): ${resp.body}');
-      }
-
-      final Map<String, dynamic> body = jsonDecode(resp.body);
-      if (body['URL'] == null) {
-        throw Exception('No URL returned from media-service');
-      }
-      urls.add(body['URL'].toString());
-    }
-
-    return urls;
-  }
 
   static Future<double> getRating() async {
     final res = await getWithToken(ApiRoutes.rating);
