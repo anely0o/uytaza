@@ -14,13 +14,13 @@ class ApiRoutes {
   // ───────── cleaner-flow ──────────────────────────────────────
   static const String cleanerOrders   = '/api/orders/orders';
   static const String cleanerOrder    = '/api/orders/orders';          // + /{id}
-  static const String finishOrder     = '/api/orders';                 // + /{id}/finish
+  static const String confirmOrder     = '/api/orders';                 // + /{id}/confirm
   static const String ratingCleaner   = '/api/rating/cleaner';         // + /{id}
   static const String reviewsCleaner  = '/api/reviews/cleaner';        // + /{id}
 
   // ───────── media ─────────────────────────────────────────────
   static const String mediaByOrder = '/api/media/order';               // GET  /api/media/order/{orderId}
-  static const String uploadReport    = '/api/media/report';         // POST /api/media/report/{orderId}
+  static const String mediaReport    = '/api/media/report';         // POST /api/media/report/{orderId}
   static const String rating = '/api/rating';
 
   static const String avatarUpload   = '/api/media/avatar';         // POST /api/media/avatar

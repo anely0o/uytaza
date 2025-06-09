@@ -46,12 +46,74 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
     }
   }
 
+  // Метод для исправления URL хоста
+  String _fixHost(String url) {
+    return url.replaceFirst('localhost:9000', '10.0.2.2:9000');
+  }
+
+  // Метод для загрузки фотографий заказа
+  Future<List<String>> _loadPhotosForOrder(String orderId) async {
+    try {
+      final mediaList = await ApiService.getMediaByOrder(orderId);
+
+      // Фильтруем медиа по типу "report" и orderId
+      final reportPhotos = mediaList
+          .where((media) => media.URL.isNotEmpty)
+          .map((media) => _fixHost(media.URL))
+          .toList();
+
+      return reportPhotos;
+    } catch (e) {
+      debugPrint('Failed to load photos for order $orderId: $e');
+      return [];
+    }
+  }
+
+  // Метод для отображения фото на весь экран
+  void _showFullScreenImage(String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            elevation: 0,
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 3.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Icon(Icons.broken_image, color: Colors.white, size: 50),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildOrderTile(Order order) {
     final fmt = DateFormat('dd.MM.yyyy, HH:mm');
     final dateStr = fmt.format(order.scheduledAt);
     final rating = order.rating ?? 0.0;
     final reviews = order.reviews ?? <String>[];
-    final photos = order.photoUrls ?? <String>[];
     final isCancelled = order.status.toLowerCase() == 'cancelled';
 
     return Card(
@@ -82,28 +144,76 @@ class _CleanerHistoryScreenState extends State<CleanerHistoryScreen> {
             const SizedBox(height: 8),
 
             // —— Photo Preview ——
-            if (photos.isNotEmpty) ...[
-              SizedBox(
-                height: 80,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: photos.length,
-                  itemBuilder: (_, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.network(
-                        photos[i],
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
+            FutureBuilder<List<String>>(
+              future: _loadPhotosForOrder(order.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2)
                       ),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
+                  );
+                }
+
+                final photos = snapshot.data ?? [];
+                if (photos.isEmpty) return const SizedBox();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: photos.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) => GestureDetector(
+                          onTap: () => _showFullScreenImage(photos[i]),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              photos[i],
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                          : null,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                );
+              },
+            ),
 
             if (!isCancelled) ...[
               Row(children: [

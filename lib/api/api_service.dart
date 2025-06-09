@@ -31,22 +31,6 @@ class ApiService {
       },
     );
   }
-  static Future<String?> uploadReport(String orderId, File file) async {
-    final uri = Uri.parse('${ApiRoutes.uploadReport}/$orderId');
-    final request = http.MultipartRequest('POST', uri);
-    request.files.add(await http.MultipartFile.fromPath('file', file.path));
-    // если нужен токен:
-    // request.headers['Authorization'] = 'Bearer $token';
-    final streamed = await request.send();
-    final body = await streamed.stream.bytesToString();
-    if (streamed.statusCode >= 200 && streamed.statusCode < 300) {
-      final data = jsonDecode(body) as Map<String, dynamic>;
-      return data['url'] as String?;
-    } else {
-      throw Exception('Report upload failed: ${streamed.statusCode} $body');
-    }
-  }
-
 
 
   static Future<http.Response> postWithToken(String endpoint, dynamic body) async {
@@ -303,20 +287,6 @@ class ApiService {
     return await http.MultipartFile.fromPath(field, file.path);
   }
 
-  static Future<http.Response> confirmCompletion(
-      String orderId, String photoUrl) async {
-    final endpoint = '${ApiRoutes.finishOrder}/$orderId/confirm';
-    final token = await getToken();
-    print('[CONFIRM] PUT $baseUrl$endpoint  body={photo_url: $photoUrl}');
-    return http.put(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'photo_url': photoUrl}),
-    );
-  }
   /// Set password for first-time login (temporary password)
   static Future<void> setInitialPassword(String tempPass, String newPass) async {
     final res = await putWithToken('/auth/set-initial-password', {
@@ -328,7 +298,52 @@ class ApiService {
       throw Exception('Failed to set initial password (${res.statusCode}): ${res.body}');
     }
   }
+  // Исправляем метод uploadReport для правильной загрузки фото
+  static Future<String> uploadReport(String orderId, File file) async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Authentication token not found');
+    }
 
+    final uri = Uri.parse('$baseUrl${ApiRoutes.mediaReport}/$orderId');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final url = data['url'] as String?;
+      if (url == null || url.isEmpty) {
+        throw Exception('No URL returned from media-service');
+      }
+      return url;
+    } else {
+      throw Exception('Report upload failed: ${response.statusCode} ${response.body}');
+    }
+  }
+
+  /// Подтверждает завершение заказа, передавая список URL-ов фото в теле
+  static Future<http.Response> confirmCompletion(
+      String orderId,
+      String photoUrl) async {
+    final token = await getToken();
+    if (token == null) {
+      throw Exception('Authentication token not found');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/orders/$orderId/confirm');
+    return await http.put(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'photo_url': photoUrl}), // Исправлено с photoUrl на photo_url
+    );
+  }
   /// Resend temporary password to user's email
   static Future<void> resendPassword(String email) async {
     final res = await post('/auth/resend-password', {
@@ -356,6 +371,7 @@ class ApiService {
     }
   }
 }
+
 
 class Media {
   final String URL;

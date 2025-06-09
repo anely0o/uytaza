@@ -34,12 +34,15 @@ class _MainTabPageState extends State<MainTabPage> {
   String? _error;
   int _unread = 0;
 
-  String? _firstName;
-  String? _lastName;
-  String? _address;
+  // Данные профиля
+  String _firstName = '';
+  String _lastName = '';
+  String _address = '';
+  String _email = '';
   bool _loadingProfile = true;
 
-  double? _rating;
+  // Данные геймификации и рейтинга
+  double _rating = 0.0;
   int _currentLevel = 0;
   int _xpTotal = 0;
 
@@ -48,11 +51,11 @@ class _MainTabPageState extends State<MainTabPage> {
     super.initState();
     _loadUserRole();
     _loadUnread();
-    _loadProfile();
-    // Обновляем профиль, рейтинг и уровень каждые 2 минуты
+
+    // Обновляем данные каждые 2 минуты
     _refreshTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      _loadUnread();
       _loadProfile();
-      if (_userRole == UserRole.cleaner) _loadCleanerStats();
     });
   }
 
@@ -76,15 +79,21 @@ class _MainTabPageState extends State<MainTabPage> {
   Future<void> _loadUserRole() async {
     try {
       final role = await ApiService.getUserRole();
-      if (mounted) setState(() {
-        _userRole = role;
-        _loadingRole = false;
-      });
+      if (mounted) {
+        setState(() {
+          _userRole = role;
+          _loadingRole = false;
+        });
+        // После загрузки роли загружаем профиль
+        _loadProfile();
+      }
     } catch (e) {
-      if (mounted) setState(() {
-        _error = '$e';
-        _loadingRole = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = '$e';
+          _loadingRole = false;
+        });
+      }
     }
   }
 
@@ -103,36 +112,48 @@ class _MainTabPageState extends State<MainTabPage> {
   }
 
   Future<void> _loadProfile() async {
+    if (_userRole == null) return;
+
+    setState(() => _loadingProfile = true);
+
     try {
-      final res = await ApiService.getWithToken(ApiRoutes.profile);
-      if (res.statusCode == 200) {
-        final m = jsonDecode(res.body) as Map<String, dynamic>;
-        _firstName = (m['first_name'] ?? '').toString();
-        _lastName = (m['last_name'] ?? '').toString();
-        _address = (m['address'] ?? '').toString();
-        // общий рейтинг и уровень
+      // Загружаем основные данные профиля
+      final profileRes = await ApiService.getWithToken(ApiRoutes.profile);
+      if (profileRes.statusCode == 200) {
+        final profileData = jsonDecode(profileRes.body) as Map<String, dynamic>;
+
+        // Обрабатываем разные варианты ключей (с заглавной буквы и без)
+        _firstName = (profileData['FirstName'] ?? profileData['first_name'] ?? '').toString();
+        _lastName = (profileData['LastName'] ?? profileData['last_name'] ?? '').toString();
+        _address = (profileData['Address'] ?? profileData['address'] ?? '').toString();
+        _email = (profileData['Email'] ?? profileData['email'] ?? '').toString();
+
+        // Для клинера загружаем рейтинг из профиля
         if (_userRole == UserRole.cleaner) {
-          _rating = (m['average_rating'] as num?)?.toDouble() ?? 0;
+          _rating = (profileData['average_rating'] as num?)?.toDouble() ?? 0.0;
         }
-        _currentLevel = (m['current_level'] as num?)?.toInt() ?? _currentLevel;
-        _xpTotal = (m['xp_total'] as num?)?.toInt() ?? _xpTotal;
       }
-    } catch (_) {}
-    if (mounted) setState(() => _loadingProfile = false);
+
+      // Загружаем данные геймификации
+      final gamificationRes = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
+      if (gamificationRes.statusCode == 200) {
+        final gamData = jsonDecode(gamificationRes.body) as Map<String, dynamic>;
+        _currentLevel = (gamData['current_level'] as num?)?.toInt() ?? 0;
+        _xpTotal = (gamData['xp_total'] as num?)?.toInt() ?? 0;
+      }
+
+    } catch (e) {
+      print('Error loading profile: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _loadingProfile = false);
+      }
+    }
   }
 
-  // Вспомогательный метод для загрузки статики клинера
-  Future<void> _loadCleanerStats() async {
-    try {
-      final gamRes = await ApiService.getWithToken(ApiRoutes.gamificationStatus);
-      if (gamRes.statusCode == 200) {
-        final gd = jsonDecode(gamRes.body) as Map<String, dynamic>;
-        if (mounted) setState(() {
-          _currentLevel = (gd['current_level'] as num).toInt();
-          _xpTotal = (gd['xp_total'] as num).toInt();
-        });
-      }
-    } catch (_) {}
+  String get _fullName {
+    final name = '$_firstName $_lastName'.trim();
+    return name.isNotEmpty ? name : 'User';
   }
 
   @override
@@ -230,12 +251,7 @@ class _MainTabPageState extends State<MainTabPage> {
           : AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
-        title: (_userRole == UserRole.client && _address != null && _address!.isNotEmpty)
-            ? Text(
-          _address!,
-          style: TextStyle(color: TColor.textPrimary, fontSize: 14),
-        )
-            : const SizedBox.shrink(),
+        title: _buildAppBarTitle(),
         centerTitle: true,
         iconTheme: IconThemeData(color: TColor.primary),
         actions: [
@@ -299,42 +315,127 @@ class _MainTabPageState extends State<MainTabPage> {
       ),
     );
   }
-  /// Сборка заголовка для клиента:
+
+  /// Заголовок AppBar в зависимости от роли пользователя
+  Widget _buildAppBarTitle() {
+    if (_loadingProfile) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    if (_userRole == UserRole.cleaner) {
+      // Для клинера показываем имя и фамилию
+      return Text(
+        _fullName,
+        style: TextStyle(
+          color: TColor.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    } else {
+      // Для клиента показываем адрес с иконкой
+      if (_address.isNotEmpty) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.location_on,
+              color: TColor.primary,
+              size: 18,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                _address,
+                style: TextStyle(
+                  color: TColor.textPrimary,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        );
+      } else {
+        return Text(
+          _fullName,
+          style: TextStyle(
+            color: TColor.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Заголовок боковой панели для клиента
   Widget _buildClientHeader() {
-    // Вычисляем прогресс XP (предполагаем 100 XP на уровень)
     final xpForCurrentLevel = _xpTotal % 100;
     final progress = xpForCurrentLevel / 100.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Имя
+        // Имя и фамилия
         Text(
-          '${_firstName ?? ''} ${_lastName ?? ''}'.trim(),
+          _fullName,
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: TColor.textPrimary,
           ),
         ),
-        const SizedBox(height: 4),
-        // Адрес под именем
-        if (_address != null && _address!.isNotEmpty)
-          Text(
-            _address!,
-            style: TextStyle(fontSize: 14, color: TColor.textSecondary),
+        const SizedBox(height: 8),
+
+        // Адрес с иконкой
+        if (_address.isNotEmpty) ...[
+          Row(
+            children: [
+              Icon(
+                Icons.location_on,
+                color: TColor.primary,
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  _address,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: TColor.textSecondary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-        const SizedBox(height: 12),
-        // Шкала геймофикации (LinearProgressIndicator)
+          const SizedBox(height: 12),
+        ],
+
+        // Уровень и XP
         Text(
-          'Level $_currentLevel   •   XP $xpForCurrentLevel/100',
+          'Level $_currentLevel',
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: TColor.textPrimary,
           ),
         ),
         const SizedBox(height: 4),
+        Text(
+          'XP: $xpForCurrentLevel/100',
+          style: TextStyle(
+            fontSize: 12,
+            color: TColor.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
@@ -348,50 +449,60 @@ class _MainTabPageState extends State<MainTabPage> {
     );
   }
 
-  /// Сборка заголовка для клинера:
+  /// Заголовок боковой панели для клинера
   Widget _buildCleanerHeader() {
-    // Вычисляем прогресс XP (предполагаем 100 XP на уровень)
     final xpForCurrentLevel = _xpTotal % 100;
     final progress = xpForCurrentLevel / 100.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Имя
+        // Имя и фамилия
         Text(
-          '${_firstName ?? ''} ${_lastName ?? ''}'.trim(),
+          _fullName,
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: TColor.textPrimary,
           ),
         ),
-        const SizedBox(height: 4),
-        // Рейтинг звёздами
+        const SizedBox(height: 8),
+
+        // Рейтинг со звездами
         Row(
           children: [
-            ..._buildStarIcons(_rating ?? 0),
+            ..._buildStarIcons(_rating),
             const SizedBox(width: 8),
             Text(
-              '(${(_rating ?? 0).toStringAsFixed(1)})',
+              '${_rating.toStringAsFixed(1)}',
               style: TextStyle(
-                fontSize: 16,
-                color: TColor.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: TColor.textPrimary,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        // Шкала геймофикации (LinearProgressIndicator)
+
+        // Уровень и XP
         Text(
-          'Level $_currentLevel   •   XP $xpForCurrentLevel/100',
+          'Level $_currentLevel',
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: TColor.textPrimary,
           ),
         ),
         const SizedBox(height: 4),
+        Text(
+          'XP: $xpForCurrentLevel/100',
+          style: TextStyle(
+            fontSize: 12,
+            color: TColor.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
@@ -405,21 +516,25 @@ class _MainTabPageState extends State<MainTabPage> {
     );
   }
 
-  /// Отрисовка звёзд по рейтингу
+  /// Генерация звезд для рейтинга
   List<Widget> _buildStarIcons(double rating) {
     const totalStars = 5;
     int full = rating.floor();
     bool hasHalf = (rating - full) >= 0.5;
     List<Widget> stars = [];
+
     for (int i = 0; i < full; i++) {
-      stars.add(const Icon(Icons.star, color: Colors.amber, size: 20));
+      stars.add(const Icon(Icons.star, color: Colors.amber, size: 18));
     }
+
     if (hasHalf) {
-      stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 20));
+      stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 18));
     }
+
     while (stars.length < totalStars) {
-      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 20));
+      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 18));
     }
+
     return stars;
   }
 }
