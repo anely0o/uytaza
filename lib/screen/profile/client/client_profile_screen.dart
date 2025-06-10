@@ -21,7 +21,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _loading = true;
   String? _error;
-  String baseUrl = ApiService.baseUrl;
+
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
@@ -140,7 +140,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     }
   }
   String _fixHost(String url) {
-    return url.replaceFirst('localhost:9000', '$baseUrl:9000');
+    return url.replaceFirst('localhost:9000', '10.0.2.2:9000');
   }
 
   Future<String?> _fetchLatestAvatarUrl() async {
